@@ -315,6 +315,12 @@ export class PoolView {
       const done = sim;
       this.sim = null;
       this.pos = done.positions();
+      const cb = this.pos.find((p) => p.id === 0);
+      if (cb && cb.on) {
+        this.cam.tx = cb.x;
+        this.cam.ty = cb.y;
+      }
+      this.cam.calm = 1.4;
       this.cam.mode = 'aim';
       this.cue.setVisible(false);
       this.handlers.onDone?.(done);

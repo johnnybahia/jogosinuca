@@ -26,6 +26,8 @@ export class CameraRig {
   userDist = 1.05;
   aspect = 1;
   private shake = 0;
+  /** segundos de retorno suave (depois da tacada) */
+  calm = 0;
   /** só para depuração: câmera fixa [x,y,z, alvoX,alvoY,alvoZ] */
   override: number[] | null = null;
 
@@ -94,7 +96,9 @@ export class CameraRig {
       gDist = 2.35;
       fovT = 38;
     }
-    const rate = this.mode === 'follow' ? 2.2 : this.mode === 'top' ? 4.2 : this.mode === 'menu' ? 1.5 : 6.5;
+    if (this.mode !== 'aim') this.calm = 0;
+    else if (this.calm > 0) this.calm -= dt;
+    const rate = this.mode === 'follow' ? 2.2 : this.mode === 'top' ? 4.2 : this.mode === 'menu' ? 1.5 : this.calm > 0 ? 3 : 6.5;
     sc.x = damp(sc.x, gx, rate, dt);
     sc.z = damp(sc.z, -gy, rate, dt);
     // menor caminho no ângulo
