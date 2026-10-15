@@ -19,7 +19,7 @@ export class CameraRig {
   ty = 0;
   pitch = 0.5;
   dist = 1.05;
-  private cur = { x: 0, y: FELT_Y + BALL_R, z: 0, yaw: 0, pitch: 0.5, dist: 1.05, fov: 42, topK: 0 };
+  private cur = { x: 0, y: FELT_Y + BALL_R, z: 0, yaw: 0, pitch: 0.5, pEff: 0.5, dist: 1.05, fov: 42, topK: 0 };
   private target = new THREE.Vector3();
   private t = 0;
   userPitch = 0.5;
@@ -110,8 +110,18 @@ export class CameraRig {
     sc.fov = damp(sc.fov, fovT, 3, dt);
     sc.topK = damp(sc.topK, gTop, 4, dt);
 
-    const cp = Math.cos(sc.pitch);
-    const sp = Math.sin(sc.pitch);
+    // perto da tabela a câmera ficaria atrás da madeira e esconderia a bola: sobe em vez de sair da mesa
+    let pitchEff = sc.pitch;
+    if (this.mode === 'aim' || this.mode === 'follow') {
+      const ux = Math.cos(sc.yaw);
+      const uz = Math.sin(sc.yaw);
+      const lim = (c: number, u: number, half: number): number => (Math.abs(u) < 1e-4 ? Infinity : u > 0 ? (half - c) / u : (-half - c) / u);
+      const tmax = Math.max(0.05, Math.min(lim(sc.x, ux, HL + 0.04), lim(sc.z, uz, HW + 0.04)));
+      if (tmax < Math.cos(sc.pitch) * sc.dist) pitchEff = Math.min(1.3, Math.max(sc.pitch, Math.acos(Math.min(1, tmax / sc.dist))));
+    }
+    sc.pEff = damp(sc.pEff, pitchEff, 8, dt);
+    const cp = Math.cos(sc.pEff);
+    const sp = Math.sin(sc.pEff);
     const ty = this.mode === 'top' || this.mode === 'menu' ? FELT_Y : FELT_Y + BALL_R * 1.4;
     this.target.set(sc.x, ty, sc.z);
     this.camera.position.set(sc.x + Math.cos(sc.yaw) * cp * sc.dist, ty + sp * sc.dist, sc.z + Math.sin(sc.yaw) * cp * sc.dist);
