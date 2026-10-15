@@ -8,9 +8,10 @@ Sinuca brasileira em 3D com **física realista** (giro, efeito, atrito do pano, 
 - **Luz e acabamento**: três spots (um por abajur) com sombras, reflexos nas bolas (verniz), bloom, vinheta, sombras de contato, sala com lambri e mármore. Qualidade **automática** (Alta/Média/Baixa) que baixa sozinha se o aparelho não aguentar.
 - **Física** (`shared/physics.ts`): bolas com giro 3D (topo, recuo e efeito lateral), transição deslizar → rolar, atrito de rolagem, colisão com restituição e atrito (o giro lateral gera "throw"), tabela que devolve menos energia em velocidades altas e muda o ângulo com efeito, pontas das tabelas e caçapas. **Determinística**: o mesmo tiro dá o mesmo resultado no cliente, no servidor e nos bots. Passo de tempo adaptativo (quebra completa ≈ 3 ms de CPU).
 - **Modos** (`shared/rules.ts`): **Par ou Ímpar** (sinuca brasileira, a 8 por último), **Lisas × Listradas** (bola 8) e **Bola 61** (cada bola vale o número; toque sempre na menor; quem chegar a 61 vence). Falta = branca na mão para o adversário.
+- **Treino livre** (mesa aberta, sem faltas, só a branca na mão se cair) e **dica de tacada** (💡 / H, só offline: mostra a mira, o efeito e a força que o Mestre escolheria).
 - **Bot** (`shared/bot.ts`): Fácil, Normal, Difícil e Mestre. Usa bola fantasma (bola alvo → caçapa), escolhe as tacadas mais fáceis e, nos níveis altos, **testa as melhores na própria física** (cai? falta? como a branca fica?) com efeito de topo/recuo para posicionar.
 - **Controles**: arrastar gira a mira (com ajuste fino, setas e Shift), pinça/roda = zoom, dois dedos inclinam; barra **FORÇA** (puxe para baixo e solte) ou Espaço; **EFEITO** tocando na bola branca; vista de cima (V) onde se toca onde mirar; bola na mão arrastando a branca. Funciona em toque e mouse, em paisagem e retrato.
-- **Online** (igual ao Rami-kami): nome + foto, sala por código/link ou pública, anfitrião escolhe modo/tempo/melhor de N, **bot na sala**, **mira ao vivo do adversário**, tempo por tacada (o relógio é do servidor; estourou = falta; 3 seguidas = derrota), **reconexão** no meio da partida, ranking global por pontuação (Elo) — só partidas entre duas pessoas contam.
+- **Online** (igual ao Rami-kami): nome + foto, **vídeo e áudio ao vivo** entre os jogadores (WebRTC; câmera e microfone começam desligados), reações rápidas, sala por código/link ou pública, anfitrião escolhe modo/tempo/melhor de N, **bot na sala**, **mira ao vivo do adversário**, tempo por tacada (o relógio é do servidor; estourou = falta; 3 seguidas = derrota), **reconexão** no meio da partida, ranking global por pontuação (Elo) — só partidas entre duas pessoas contam.
 - **Offline + atualização no jogo**: o service worker baixa o jogo na 1ª visita ("Baixando… N%" → "Pronto para jogar offline"). Versão nova aparece como **"Atualizar"** no menu e como um aviso dentro da partida; nunca troca sozinha no meio de uma tacada.
 
 ## Rodar localmente
@@ -63,9 +64,14 @@ node scripts/make_icons.mjs     # ícones do app
 ## Limites e riscos (leia antes de convidar muita gente)
 
 - **Plano gratuito do Cloudflare**: ~100 mil requisições/dia no Worker e limites diários nos Durable Objects. Para jogo entre amigos sobra; se estourar, o online para até o dia seguinte (UTC). O servidor roda a física de cada tacada (3–15 ms de CPU; a quebra é a mais pesada) — se o plano gratuito impuser limite de CPU menor que isso na sua conta, o primeiro sintoma é tacada online sem resposta; o offline não é afetado.
+- **Privacidade da sala**: o servidor mostra para os outros jogadores só um identificador público derivado do id, então ninguém consegue tomar o lugar de outro jogador conhecendo o id dele.
 - **Ranking**: a identidade é um ID aleatório guardado no navegador (limpar os dados cria um jogador novo; dois amigos podem combinar partidas). Só partidas entre duas pessoas contam.
 - **Não testado**: aparelhos reais (principalmente iPhone/Safari), desempenho em celulares fracos (há o ajuste automático de qualidade), o deploy na Cloudflare em si (só `wrangler dev` local) e o som (sintetizado, não foi ouvido em testes automáticos).
 - A reprodução da tacada no cliente roda a mesma simulação do servidor; se algum dia houver diferença numérica entre navegadores, o estado oficial do servidor vence ao final da jogada (as bolas "pulam" para a posição correta).
+
+### Vídeo atrás de roteadores restritivos (opcional)
+
+Vídeo/áudio é ponto a ponto (WebRTC). Atrás de alguns roteadores/4G ele não conecta sem um servidor TURN. Crie uma chave TURN no painel Cloudflare (Realtime → TURN) e rode `npx wrangler secret put TURN_KEY_ID -c server/wrangler.toml` e `npx wrangler secret put TURN_API_TOKEN -c server/wrangler.toml`. O jogo funciona sem isso (a pessoa só fica com a foto).
 
 ## Zerar o ranking
 

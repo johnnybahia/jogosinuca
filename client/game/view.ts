@@ -396,6 +396,7 @@ export class PoolView {
     }
     if (this.sim) this.stepSim(dt);
     this.balls.update(dt);
+    this.table.update(dt);
     this.cam.update(dt, this.sim && this.followCue ? this.followTarget() : undefined);
     this.onFrame?.(dt);
     if (this.post.enabled) this.post.render(dt, this.time);

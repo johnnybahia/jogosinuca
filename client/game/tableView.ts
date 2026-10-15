@@ -28,6 +28,9 @@ export interface TableParts {
   setFelt(theme: FeltTheme): void;
   setProfile(p: QualityProfile): void;
   cones: THREE.Mesh[];
+  /** poeira flutuando na luz (só nas qualidades média/alta) */
+  dust: THREE.Points;
+  update(dt: number): void;
 }
 
 export const CEILING_Y = 3.4;
@@ -131,6 +134,21 @@ export async function buildTable(assets: Assets, qp: QualityProfile, renderer: T
   for (const sz of [-1, 1]) for (const sx of [-1, 1]) for (const k of [1, 2, 3]) addDiamond(sx * HL * (k / 4) * 1.0, sz * (HW + railMid));
   for (const sx of [-1, 1]) for (const k of [-1, 0, 1]) addDiamond(sx * (HL + railMid), k * HW * 0.5);
 
+  // ---------- aros de couro nas caçapas (só a metade de fora do campo)
+  const leather = new THREE.MeshStandardMaterial({ color: 0x2b1810, roughness: 0.55, metalness: 0.05 });
+  for (const p of POCKETS) {
+    const arc = Math.PI * 1.1;
+    const g = new THREE.TorusGeometry(POCKET_HOLE_R + 0.003, 0.0052, 10, 40, arc);
+    const t = new THREE.Mesh(g, leather);
+    t.rotation.z = Math.atan2(p.ny, p.nx) - arc / 2;
+    t.castShadow = true;
+    const holder = new THREE.Group();
+    holder.add(t);
+    holder.rotation.x = -Math.PI / 2;
+    holder.position.set(p.x, 0.0408, -p.y);
+    group.add(holder);
+  }
+
   // ---------- chão de mármore, paredes e teto
   marC.repeat.set(5, 5);
   marN.repeat.set(5, 5);
@@ -216,7 +234,66 @@ export async function buildTable(assets: Assets, qp: QualityProfile, renderer: T
 
   const cones: THREE.Mesh[] = [];
 
+  // brilho dos abajures (sprite aditivo) e poeira na luz
+  const glowTex = (() => {
+    const c = document.createElement('canvas');
+    c.width = c.height = 128;
+    const g = c.getContext('2d')!;
+    const gr = g.createRadialGradient(64, 64, 2, 64, 64, 62);
+    gr.addColorStop(0, 'rgba(255,240,210,1)');
+    gr.addColorStop(0.25, 'rgba(255,220,160,0.45)');
+    gr.addColorStop(1, 'rgba(255,200,120,0)');
+    g.fillStyle = gr;
+    g.fillRect(0, 0, 128, 128);
+    const t = new THREE.CanvasTexture(c);
+    t.colorSpace = THREE.SRGBColorSpace;
+    return t;
+  })();
+  const glowMat = new THREE.SpriteMaterial({ map: glowTex, blending: THREE.AdditiveBlending, depthWrite: false, transparent: true, opacity: 0.5, toneMapped: false });
+  const glows: THREE.Sprite[] = [];
+  for (const p of bulbPos) {
+    const sp = new THREE.Sprite(glowMat);
+    sp.position.set(p.x, p.y - 0.05, p.z);
+    sp.scale.setScalar(0.3);
+    outer.add(sp);
+    glows.push(sp);
+  }
+  const DUST = 140;
+  const dpos = new Float32Array(DUST * 3);
+  const dseed = new Float32Array(DUST * 3);
+  for (let i = 0; i < DUST; i++) {
+    const b = bulbPos[i % bulbPos.length]!;
+    const a = Math.random() * Math.PI * 2;
+    const r = Math.sqrt(Math.random()) * 0.55;
+    dpos[i * 3] = b.x + Math.cos(a) * r;
+    dpos[i * 3 + 1] = FELT_Y + 0.15 + Math.random() * (b.y - FELT_Y - 0.25);
+    dpos[i * 3 + 2] = b.z + Math.sin(a) * r;
+    dseed[i * 3] = Math.random() * 6.28;
+    dseed[i * 3 + 1] = 0.01 + Math.random() * 0.02;
+    dseed[i * 3 + 2] = Math.random() * 6.28;
+  }
+  const dgeo = new THREE.BufferGeometry();
+  dgeo.setAttribute('position', new THREE.BufferAttribute(dpos, 3));
+  const dust = new THREE.Points(dgeo, new THREE.PointsMaterial({ map: glowTex, size: 0.016, sizeAttenuation: true, transparent: true, opacity: 0.28, depthWrite: false, blending: THREE.AdditiveBlending, color: 0xffe9c4 }));
+  dust.frustumCulled = false;
+  outer.add(dust);
+  let dt0 = 0;
+  const update = (dt: number): void => {
+    if (!dust.visible) return;
+    dt0 += dt;
+    const arr = dgeo.attributes.position!.array as Float32Array;
+    for (let i = 0; i < DUST; i++) {
+      arr[i * 3] += Math.sin(dt0 * 0.3 + dseed[i * 3]!) * dt * 0.012;
+      arr[i * 3 + 1] -= dseed[i * 3 + 1]! * dt * 0.5;
+      arr[i * 3 + 2] += Math.cos(dt0 * 0.27 + dseed[i * 3 + 2]!) * dt * 0.012;
+      if (arr[i * 3 + 1]! < FELT_Y + 0.1) arr[i * 3 + 1] = bulbPos[i % bulbPos.length]!.y - 0.15;
+    }
+    dgeo.attributes.position!.needsUpdate = true;
+  };
+
   const setProfile = (p: QualityProfile): void => {
+    dust.visible = p.shadowLights > 0;
+    glows.forEach((g) => (g.visible = p.bloom));
     spots.forEach((s, i) => {
       const on = i < p.shadowLights || (p.shadowLights === 1 && i === 1);
       s.castShadow = p.shadowLights > 0 && (p.shadowLights >= 3 || i === 1) && on;
@@ -238,7 +315,7 @@ export async function buildTable(assets: Assets, qp: QualityProfile, renderer: T
   setFelt(FELTS[0]!);
   setProfile(qp);
 
-  return { group: outer, felt, cushions, frame, lampGroup, spots, bulbs, floor, setFelt, setProfile, cones };
+  return { group: outer, felt, cushions, frame, lampGroup, spots, bulbs, floor, setFelt, setProfile, cones, dust, update };
 }
 
 /** Papel de parede escuro com lambri de madeira na parte de baixo (feito em canvas, sem arquivo). */
