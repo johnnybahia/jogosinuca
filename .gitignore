@@ -1,0 +1,9 @@
+node_modules
+dist
+.wrangler
+*.log
+.DS_Store
+.env.local
+assets_src/build/
+.env*
+!.env.development

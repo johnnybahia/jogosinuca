@@ -1,0 +1,31 @@
+{
+  "name": "sinuca3d",
+  "version": "0.1.0",
+  "description": "Sinuca 3D: sinuca brasileira com física realista, jogo online, offline contra bots e instalação no celular (PWA)",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit && tsc -p server/tsconfig.json",
+    "test": "vitest run",
+    "server:dev": "wrangler dev -c server/wrangler.toml",
+    "server:deploy": "wrangler deploy -c server/wrangler.toml",
+    "deploy": "npm run build && wrangler deploy -c server/wrangler.toml",
+    "assets": "node scripts/build_assets.mjs",
+    "icons": "node scripts/make_icons.mjs",
+    "e2e:server": "node scripts/e2e-server.mjs"
+  },
+  "dependencies": {
+    "three": "^0.186.1"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^5.20261006.1",
+    "@types/three": "^0.186.0",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.4",
+    "vitest": "^5.0.5",
+    "wrangler": "^4.147.0"
+  }
+}

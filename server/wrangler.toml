@@ -1,0 +1,27 @@
+name = "sinuca3d"
+main = "src/index.ts"
+compatibility_date = "2025-10-01"
+
+# O mesmo Worker serve o jogo (pasta dist/) e a API/WebSocket: um deploy, uma URL, plano gratuito.
+[assets]
+directory = "../dist"
+binding = "ASSETS"
+not_found_handling = "single-page-application"
+run_worker_first = ["/api/*", "/ws/*"]
+
+[[durable_objects.bindings]]
+name = "ROOM"
+class_name = "GameRoom"
+
+[[durable_objects.bindings]]
+name = "LOBBY"
+class_name = "Lobby"
+
+[[durable_objects.bindings]]
+name = "RANKING"
+class_name = "Ranking"
+
+# Durable Objects no plano gratuito exigem armazenamento SQLite.
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["GameRoom", "Lobby", "Ranking"]
