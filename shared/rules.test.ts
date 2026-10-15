@@ -89,6 +89,27 @@ describe('regras', () => {
     expect(r3.out.winner).toBe(0);
   });
 
+  it('falta devolve à mesa uma bola já feita pelo infrator', () => {
+    const s = newMatch('par_impar');
+    const sim = simFrom(s);
+    sim.firstHit = 2;
+    sim.railAfterHit = true;
+    sim.balls[2]!.on = false;
+    sim.pocketed.push({ id: 2, p: 0 });
+    const s1 = resolveShot(s, sim).state;
+    expect(s1.tray).toContain(2);
+    const sim2 = simFrom(s1);
+    sim2.firstHit = 3; // bola do adversário primeiro
+    sim2.railAfterHit = true;
+    const r = resolveShot(s1, sim2);
+    expect(r.out.foul).not.toBeNull();
+    expect(r.out.respotted).toContain(2);
+    expect(r.state.tray).not.toContain(2);
+    expect(r.state.balls.find((b) => b.id === 2)!.on).toBe(true);
+    expect(r.state.turn).toBe(1);
+    expect(r.state.inHand).toBe('any');
+  });
+
   it('simulação real: quebra gera estado consistente', () => {
     const s = newMatch('lisas_listradas');
     const balls: Ball[] = [];
