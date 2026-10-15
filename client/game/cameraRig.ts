@@ -24,6 +24,8 @@ export class CameraRig {
   private t = 0;
   userPitch = 0.5;
   userDist = 1.05;
+  /** zoom da vista de cima (1 = mesa inteira) */
+  topZoom = 1;
   aspect = 1;
   private shake = 0;
   /** segundos de retorno suave (depois da tacada) */
@@ -85,7 +87,7 @@ export class CameraRig {
       gTop = 1;
       gYaw = Math.PI / 2;
       gPitch = 1.5;
-      gDist = this.topDist();
+      gDist = this.topDist() * this.topZoom;
       fovT = 40;
     } else {
       // menu

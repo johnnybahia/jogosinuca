@@ -34,6 +34,7 @@ export class AimInput {
     on('pointermove', (e) => this.move(e));
     on('pointerup', (e) => this.up(e));
     on('pointercancel', (e) => this.up(e));
+    on('lostpointercapture', (e) => this.up(e));
     on('wheel', (e) => this.wheel(e), { passive: false });
     on('contextmenu', (e) => e.preventDefault());
   }
@@ -48,7 +49,6 @@ export class AimInput {
   }
 
   private down(e: PointerEvent): void {
-    if (this.cb.mode() === 'off') return;
     this.canvas.setPointerCapture(e.pointerId);
     this.ptrs.set(e.pointerId, { x: e.clientX, y: e.clientY });
     this.rbtn = e.button === 2;
@@ -61,6 +61,7 @@ export class AimInput {
       return;
     }
     const mode = this.cb.mode();
+    if (mode === 'off') return;
     const n = this.ndc(e);
     const p = this.view.cam.pick(n.x, n.y);
     if (mode === 'place') {
@@ -91,6 +92,7 @@ export class AimInput {
     }
     this.ptrs.set(e.pointerId, cur);
     const mode = this.cb.mode();
+    if (mode === 'off') return;
     const dx = cur.x - prev.x;
     const dy = cur.y - prev.y;
     if (this.rbtn) {
@@ -129,18 +131,18 @@ export class AimInput {
   }
 
   private wheel(e: WheelEvent): void {
-    if (this.cb.mode() === 'off') return;
     e.preventDefault();
     this.zoom(Math.exp(e.deltaY * 0.0011));
   }
 
   zoom(f: number): void {
     const c = this.view.cam;
-    c.userDist = clamp(c.userDist * f, 0.22, 2.3);
+    if (c.mode === 'top') c.topZoom = clamp(c.topZoom * f, 0.45, 1.4);
+    else c.userDist = clamp(c.userDist * f, 0.22, 3);
   }
 
   tilt(d: number): void {
     const c = this.view.cam;
-    c.userPitch = clamp(c.userPitch + d, 0.12, 1.25);
+    c.userPitch = clamp(c.userPitch + d, 0.12, 1.4);
   }
 }
