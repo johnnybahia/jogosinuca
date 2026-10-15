@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { aimTrace } from '../../shared/aim';
+import { POCKETS } from '../../shared/table';
 import { Sim, strike, type BallPos, type ShotParams, type SimEvent } from '../../shared/physics';
 import { Assets } from './assets';
 import { sndBall, sndCue, sndCushion, sndPocket } from './audio';
@@ -286,6 +287,7 @@ export class PoolView {
     const cue = sim.balls[0]!;
     strike(cue, this.strikeShot!);
     this.sim = sim;
+    this.pocketFocus = null;
     this.evIdx = 0;
     this.acc = 0;
     sndCue(this.strikeShot!.v / 6.8);
@@ -314,6 +316,8 @@ export class PoolView {
       else {
         sndPocket(e.v);
         const b = sim.balls[e.a]!;
+        const pk = POCKETS[e.p];
+        if (pk && e.a !== 0) this.pocketFocus = { x: pk.x, y: pk.y, t: 1.5 };
         this.balls.pocket(e.a, e.p, b.x, b.y);
       }
       this.handlers.onEvent?.(e, sim);
@@ -335,16 +339,39 @@ export class PoolView {
     }
   }
 
-  /** Centro das bolas em movimento (câmera de acompanhamento). */
-  private followTarget(): { x: number; y: number } {
+  /** Câmera de acompanhamento: bola caindo na caçapa > bola perto de uma caçapa > bola batida > branca. */
+  private followTarget(): { x: number; y: number; high?: boolean; yaw?: number } {
     const sim = this.sim;
+    const toward = (px: number, py: number): number => Math.atan2(py, -px);
+    if (this.pocketFocus && this.pocketFocus.t > 0) {
+      const f = this.pocketFocus;
+      return { x: f.x, y: f.y, high: true, yaw: toward(f.x, f.y) };
+    }
     const cue = sim?.balls[0];
-    if (cue && cue.on) return { x: cue.x, y: cue.y };
     if (sim) {
+      let best: { x: number; y: number; d: number; pi: number } | null = null;
+      for (const b of sim.balls) {
+        if (!b || !b.on || b.rest || b.id === 0) continue;
+        for (let i = 0; i < POCKETS.length; i++) {
+          const p = POCKETS[i]!;
+          const dx = p.x - b.x;
+          const dy = p.y - b.y;
+          const d = Math.hypot(dx, dy);
+          if (d < 0.7 && dx * b.vx + dy * b.vy > 0 && (!best || d < best.d)) best = { x: b.x, y: b.y, d, pi: i };
+        }
+      }
+      if (best) {
+        const p = POCKETS[best.pi]!;
+        return { x: (best.x + p.x) / 2, y: (best.y + p.y) / 2, high: true, yaw: toward(p.x, p.y) };
+      }
+      const fh = sim.firstHit >= 0 ? sim.balls[sim.firstHit] : null;
+      if (fh && fh.on && !fh.rest) return { x: fh.x, y: fh.y };
+      if (cue && cue.on) return { x: cue.x, y: cue.y };
       for (const b of sim.balls) if (b && b.on && !b.rest) return { x: b.x, y: b.y };
     }
     return { x: this.cam.tx, y: this.cam.ty };
   }
+  private pocketFocus: { x: number; y: number; t: number } | null = null;
 
   // ---------- laço de desenho
   start(): void {
@@ -408,6 +435,7 @@ export class PoolView {
         this.strikeT = -1;
       }
     }
+    if (this.pocketFocus) this.pocketFocus.t -= dt;
     if (this.sim) this.stepSim(dt);
     this.balls.update(dt);
     this.table.update(dt);

@@ -51,7 +51,7 @@ export class CameraRig {
     return Math.max(needV, needH) * 1.0;
   }
 
-  update(dt: number, follow?: { x: number; y: number }): void {
+  update(dt: number, follow?: { x: number; y: number; high?: boolean; yaw?: number }): void {
     this.t += dt;
     if (this.override) {
       const o = this.override;
@@ -77,9 +77,9 @@ export class CameraRig {
       const f = follow ?? { x: this.tx, y: this.ty };
       gx = f.x;
       gy = f.y;
-      gYaw = -this.aimAngle + Math.PI;
-      gPitch = Math.max(this.userPitch, 0.62);
-      gDist = this.userDist * 1.55;
+      gYaw = f.yaw ?? -this.aimAngle + Math.PI;
+      gPitch = Math.max(this.userPitch, f.high ? 0.95 : 0.62);
+      gDist = this.userDist * (f.high ? 1.0 : 1.55);
       fovT = 42 + narrow * 40;
     } else if (this.mode === 'top') {
       gx = 0;
@@ -100,7 +100,7 @@ export class CameraRig {
     }
     if (this.mode !== 'aim') this.calm = 0;
     else if (this.calm > 0) this.calm -= dt;
-    const rate = this.mode === 'follow' ? 2.2 : this.mode === 'top' ? 4.2 : this.mode === 'menu' ? 1.5 : this.calm > 0 ? 3 : 6.5;
+    const rate = this.mode === 'follow' ? (follow?.high ? 3.2 : 2.2) : this.mode === 'top' ? 4.2 : this.mode === 'menu' ? 1.5 : this.calm > 0 ? 3 : 6.5;
     sc.x = damp(sc.x, gx, rate, dt);
     sc.z = damp(sc.z, -gy, rate, dt);
     // menor caminho no ângulo
