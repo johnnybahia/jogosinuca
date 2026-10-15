@@ -18,11 +18,11 @@ export const FELT_Y = 0.78;
 export const CUSHION_H = 0.635 * BALL_D;
 
 /** Abertura das caçapas medida na ponta das tabelas. */
-export const CORNER_G = 0.078;
-export const SIDE_G = 45.7 * K;
+export const CORNER_G = 0.07;
+export const SIDE_G = 40 * K;
 export const KNUCKLE_R = 0.0048;
 /** Raio do buraco da caçapa na madeira e no pano (só visual). */
-export const POCKET_HOLE_R = 0.062;
+export const POCKET_HOLE_R = 0.056;
 /** Profundidade da tabela (do nariz ao fundo) e largura da madeira por fora dela. */
 export const CUSHION_D = 0.04;
 export const RAIL_W = 0.085;
