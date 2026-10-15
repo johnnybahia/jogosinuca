@@ -193,6 +193,10 @@ export class PoolView {
     this.balls.setPositions(this.pos);
   }
 
+  setMine(ids: ReadonlySet<number>): void {
+    this.balls.setMine(ids);
+  }
+
   setCameraMode(m: CamMode): void {
     this.cam.mode = m;
     // vista de cima: a luminária atrapalha

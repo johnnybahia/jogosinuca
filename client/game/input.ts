@@ -136,7 +136,7 @@ export class AimInput {
 
   zoom(f: number): void {
     const c = this.view.cam;
-    c.userDist = clamp(c.userDist * f, 0.5, 2.3);
+    c.userDist = clamp(c.userDist * f, 0.22, 2.3);
   }
 
   tilt(d: number): void {

@@ -25,6 +25,7 @@ export interface HudHandlers {
   onPower(p: number, release: boolean): void;
   onSpin(a: number, b: number): void;
   onView(): void;
+  onZoom(): void;
   onGuide(): void;
   onSound(): void;
   onMenu(): void;
@@ -59,6 +60,7 @@ export class Hud {
   private btnSound!: HTMLButtonElement;
   private btnGuide!: HTMLButtonElement;
   private btnView!: HTMLButtonElement;
+  private btnZoom!: HTMLButtonElement;
   private btnCam!: HTMLButtonElement;
   private btnMic!: HTMLButtonElement;
   private btnEmote!: HTMLButtonElement;
@@ -84,6 +86,7 @@ export class Hud {
     // botões de topo (à direita)
     const mk = (label: string, title: string, fn: () => void): HTMLButtonElement => h('button', { class: 'ibtn', text: label, attrs: { type: 'button', title, 'aria-label': title }, on: { click: fn } });
     this.btnView = mk('⌖', 'Trocar visão (V)', () => hd.onView());
+    this.btnZoom = mk('🔍', 'Zoom de perto (Z)', () => hd.onZoom());
     this.btnGuide = mk('◎', 'Linha de mira (G)', () => hd.onGuide());
     this.btnSound = mk('♪', 'Som (M)', () => hd.onSound());
     const btnMenu = mk('☰', 'Menu (Esc)', () => hd.onMenu());
@@ -94,7 +97,7 @@ export class Hud {
     this.btnHint.hidden = true;
     for (const b of [this.btnCam, this.btnMic, this.btnEmote]) b.hidden = true;
     EMOTES.forEach((e, i) => this.emotes.append(h('button', { class: 'emote-btn', text: e, attrs: { type: 'button' }, on: { click: () => { this.emotes.classList.remove('open'); hd.onEmote?.(i); } } })));
-    const tools = h('div', { class: 'tools' }, this.btnView, this.btnGuide, this.btnSound, this.btnHint, this.btnCam, this.btnMic, this.btnEmote, btnMenu);
+    const tools = h('div', { class: 'tools' }, this.btnView, this.btnZoom, this.btnGuide, this.btnSound, this.btnHint, this.btnCam, this.btnMic, this.btnEmote, btnMenu);
 
     // força: puxe a alça para baixo e solte para tacar
     this.power.append(h('div', { class: 'power-track' }, this.powerFill), this.powerHint, this.powerKnob, this.powerLabel);
@@ -248,6 +251,10 @@ export class Hud {
     this.enabled = on;
     this.root.classList.toggle('can-play', on);
     if (!on) this.setPower(0);
+  }
+
+  setZoomOn(on: boolean): void {
+    this.btnZoom.classList.toggle('on', on);
   }
 
   setPlacing(on: boolean): void {

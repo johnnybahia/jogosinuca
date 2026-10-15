@@ -277,6 +277,20 @@ export function resolveShot(prev: MatchState, sim: Sim): { state: MatchState; ou
       s.turn = opp;
       s.inHand = 'any';
       out.message = foul;
+      // falta: o infrator devolve à mesa uma das bolas que já fez
+      const gm = s.groups[me];
+      if (gm) {
+        for (let i = s.tray.length - 1; i >= 0; i--) {
+          const id = s.tray[i]!;
+          if (id > 0 && id !== 8 && groupOf(s.mode, id) === gm) {
+            s.tray.splice(i, 1);
+            respot(s.balls, id);
+            out.respotted.push(id);
+            out.message = `${foul}. Devolve a bola ${id}`;
+            break;
+          }
+        }
+      }
     } else {
       const g = s.groups[me];
       const own = g ? sunk.filter((id) => groupOf(s.mode, id) === g) : sunk;

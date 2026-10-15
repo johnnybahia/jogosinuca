@@ -18,6 +18,8 @@ export interface BallVis {
   id: number;
   mesh: THREE.Mesh;
   shadow: THREE.Mesh;
+  ring: THREE.Mesh;
+  mine: boolean;
   sink: Sink | null;
   on: boolean;
 }
@@ -53,6 +55,8 @@ export class BallsView {
     const blob = blobTexture();
     const blobGeo = new THREE.PlaneGeometry(BALL_R * 3.6, BALL_R * 3.6).rotateX(-Math.PI / 2);
     const blobMat = new THREE.MeshBasicMaterial({ map: blob, transparent: true, depthWrite: false, opacity: 0.55, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 });
+    const ringGeo = new THREE.RingGeometry(BALL_R * 1.28, BALL_R * 1.62, 40).rotateX(-Math.PI / 2);
+    const ringMat = new THREE.MeshBasicMaterial({ color: 0xffd36a, transparent: true, opacity: 0.85, depthWrite: false, toneMapped: false, polygonOffset: true, polygonOffsetFactor: -3, polygonOffsetUnits: -3 });
     for (let i = 0; i < 16; i++) {
       const mat = new THREE.MeshPhysicalMaterial({ map: texs[i]!, roughness: 0.14, metalness: 0, clearcoat: 1, clearcoatRoughness: 0.035, envMapIntensity: 1.1, specularIntensity: 1 });
       v.mats.push(mat);
@@ -63,12 +67,23 @@ export class BallsView {
       const shadow = new THREE.Mesh(blobGeo, blobMat);
       shadow.renderOrder = 2;
       shadow.visible = false;
-      v.group.add(mesh, shadow);
-      v.vis.push({ id: i, mesh, shadow, sink: null, on: true });
+      const ring = new THREE.Mesh(ringGeo, ringMat);
+      ring.renderOrder = 3;
+      ring.visible = false;
+      v.group.add(mesh, shadow, ring);
+      v.vis.push({ id: i, mesh, shadow, ring, mine: false, sink: null, on: true });
       // orientação inicial aleatória (determinística por bola) para os números não ficarem todos iguais
       mesh.quaternion.setFromEuler(new THREE.Euler(i * 1.9, i * 2.7, i * 0.9));
     }
     return v;
+  }
+
+  /** Destaca (anel dourado no pano) as bolas indicadas. */
+  setMine(ids: ReadonlySet<number>): void {
+    for (const v of this.vis) {
+      v.mine = ids.has(v.id);
+      v.ring.visible = v.mine && v.on;
+    }
   }
 
   setBlobOpacity(o: number): void {
@@ -82,14 +97,17 @@ export class BallsView {
       v.on = false;
       v.mesh.visible = false;
       v.shadow.visible = false;
+      v.ring.visible = false;
     }
     for (const p of pos) {
       const v = this.vis[p.id]!;
       v.on = p.on;
       v.mesh.visible = p.on;
       v.shadow.visible = p.on;
+      v.ring.visible = p.on && v.mine;
       v.mesh.position.set(p.x, SURFACE_Y, -p.y);
       v.shadow.position.set(p.x, FELT_Y + 0.0006, -p.y);
+      v.ring.position.set(p.x, FELT_Y + 0.0009, -p.y);
     }
   }
 
@@ -101,6 +119,7 @@ export class BallsView {
       if (b.on) {
         v.mesh.position.set(b.x, SURFACE_Y, -b.y);
         v.shadow.position.set(b.x, FELT_Y + 0.0006, -b.y);
+        v.ring.position.set(b.x, FELT_Y + 0.0009, -b.y);
         if (!b.rest) {
           // ω no referencial da cena: (wx, wz, -wy)
           const wx = b.wx;
@@ -123,6 +142,7 @@ export class BallsView {
     const p = POCKETS[pocketIndex];
     v.on = false;
     v.shadow.visible = false;
+    v.ring.visible = false;
     if (!p) {
       v.mesh.visible = false;
       return;

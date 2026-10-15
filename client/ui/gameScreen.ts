@@ -9,7 +9,7 @@ import { FELTS } from '../game/tableView';
 import type { AimState, PoolView } from '../game/view';
 import { avatarColor, loadPrefs, loadStats, savePrefs, saveStats, type Profile } from '../store';
 import type { AimMsg, RoomView, ShotEvent } from '../../shared/protocol';
-import { MODES, groupName, nearestFree, targets, type MatchState } from '../../shared/rules';
+import { MODES, groupName, groupOf, nearestFree, targets, type MatchState } from '../../shared/rules';
 import { getPwa, applyUpdate, onPwa } from '../pwa';
 import { qualityOptions } from './settings';
 import { LobbyPanel } from './lobby';
@@ -38,6 +38,7 @@ export class GameScreen {
   private photos: Record<string, string> = {};
   private phase: Phase = 'wait';
   private animating = false;
+  private spinKeep = { a: 0, b: 0 };
   private aim: AimState = { angle: 0, a: 0, b: 0, pull: 0.05 };
   private placed: { x: number; y: number } | null = null;
   private lastSeq = -1;
@@ -72,6 +73,7 @@ export class GameScreen {
       onPower: (p, rel) => this.onPower(p, rel),
       onSpin: (a, b) => this.onSpin(a, b),
       onView: () => this.toggleView(),
+      onZoom: () => this.toggleZoom(),
       onGuide: () => this.toggleGuide(),
       onSound: () => this.toggleSound(),
       onMenu: () => this.openMenu(),
@@ -240,7 +242,27 @@ export class GameScreen {
       return;
     }
     this.seenResult = false;
+    this.markMine(m);
     this.enterTurn();
+  }
+
+  /** Anel nas bolas do jogador (grupo dele; na 61, a bola da vez). */
+  private markMine(m: MatchState): void {
+    const ids = new Set<number>();
+    const me = this.mySeat;
+    if (me >= 0 && !this.v?.practice) {
+      if (m.mode === 'bola61') {
+        const low = m.balls.filter((b) => b.on && b.id > 0).map((b) => b.id);
+        if (low.length) ids.add(Math.min(...low));
+      } else {
+        const g = m.groups[me];
+        if (g) {
+          for (const b of m.balls) if (b.on && b.id > 0 && b.id !== 8 && groupOf(m.mode, b.id) === g) ids.add(b.id);
+          if (ids.size === 0 && m.balls.some((b) => b.on && b.id === 8)) ids.add(8);
+        }
+      }
+    }
+    this.view.setMine(ids);
   }
 
   /** Decide se é a nossa vez (mira) ou a do adversário (espera). */
@@ -308,7 +330,8 @@ export class GameScreen {
       }
     }
     if (best && (announce || !Number.isFinite(this.aim.angle))) this.aim.angle = Math.atan2(best.y - c.y, best.x - c.x);
-    const sp = this.hud.spinNow;
+    const sp = this.spinKeep;
+    this.hud.setSpin(sp.a, sp.b);
     this.aim = { angle: this.aim.angle, a: sp.a, b: sp.b, pull: 0.05 };
     this.top = this.top && this.phase === 'aim' ? this.top : false;
     this.view.setCameraMode(this.top ? 'top' : 'aim');
@@ -370,6 +393,7 @@ export class GameScreen {
     this.pushAim();
   }
   private onSpin(a: number, b: number): void {
+    this.spinKeep = { a, b };
     if (this.phase !== 'aim') return;
     this.aim.a = a;
     this.aim.b = b;
@@ -432,6 +456,7 @@ export class GameScreen {
     this.aim.angle = Math.atan2(plan.shot.dy, plan.shot.dx);
     this.aim.a = plan.shot.a;
     this.aim.b = plan.shot.b;
+    this.spinKeep = { a: plan.shot.a, b: plan.shot.b };
     this.hud.setSpin(plan.shot.a, plan.shot.b);
     const q = Math.min(1, Math.max(0, (plan.shot.v - MIN_SPEED) / (MAX_SPEED - MIN_SPEED)));
     const p = (-0.35 + Math.sqrt(0.1225 + 2.6 * q)) / 1.3;
@@ -446,6 +471,13 @@ export class GameScreen {
     this.top = !this.top;
     this.view.setCameraMode(this.top ? 'top' : 'aim');
     this.hud.setButtons({ top: this.top, guide: loadPrefs().guide, muted: isMuted() });
+    sndClick();
+  }
+  private toggleZoom(): void {
+    const c = this.view.cam;
+    const close = c.userDist > 0.5;
+    c.userDist = close ? 0.3 : 1.05;
+    this.hud.setZoomOn(close);
     sndClick();
   }
   private toggleGuide(): void {
@@ -468,6 +500,7 @@ export class GameScreen {
     if (this.overlay) return;
     if (k === 'v' || k === 'V') return this.toggleView();
     if (k === 'g' || k === 'G') return this.toggleGuide();
+    if (k === 'z' || k === 'Z') return this.toggleZoom();
     if (k === 'h' || k === 'H') return this.hint();
     if (k === 'm' || k === 'M') return this.toggleSound();
     if (k === ' ' && this.phase === 'aim') {
