@@ -1,6 +1,5 @@
 /**
- * Geometria da mesa (metros). Proporções tiradas do modelo 3D fornecido (campo de 1200 x 622 unidades
- * com bolas de 37,86 de diâmetro), em escala de bola de 57,15 mm. Plano da física: x = comprimento, y = largura
+ * Geometria da mesa (metros): campo profissional de 9 pés (2,54 x 1,27 m) com bolas de 57,15 mm. Plano da física: x = comprimento, y = largura
  * (no 3D, y da física vira z). Origem no centro da mesa.
  */
 export const BALL_R = 0.028575;
@@ -9,8 +8,8 @@ export const BALL_MASS = 0.17;
 const K = BALL_R / 18.93;
 
 /** Meio comprimento e meia largura do campo (linha do nariz da tabela). */
-export const HL = 600.3 * K;
-export const HW = 310.85 * K;
+export const HL = 1.27;
+export const HW = 0.635;
 
 /** Altura do feltro no 3D (a mesa de verdade fica a ~78 cm do chão). */
 export const FELT_Y = 0.78;

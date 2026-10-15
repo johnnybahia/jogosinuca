@@ -199,7 +199,7 @@ export async function buildTable(assets: Assets, qp: QualityProfile, renderer: T
   // ---------- luminária (modelo) + holofotes
   const lampGroup = new THREE.Group();
   lampGroup.position.y = CEILING_Y;
-  lampGroup.scale.setScalar(LAMP_SCALE);
+  lampGroup.scale.set(LAMP_SCALE * 1.4, LAMP_SCALE, LAMP_SCALE * 1.35);
   lampGroup.add(lampGltf.scene);
   const bulbs: THREE.Mesh[] = [];
   const bulbMat = new THREE.MeshBasicMaterial({ color: 0xfff1cf, toneMapped: false });
@@ -220,7 +220,7 @@ export async function buildTable(assets: Assets, qp: QualityProfile, renderer: T
   const spots: THREE.SpotLight[] = [];
   const bulbPos = bulbs.map((b) => new THREE.Box3().setFromObject(b).getCenter(new THREE.Vector3())).sort((a, b) => a.x - b.x);
   for (const p of bulbPos) {
-    const s = new THREE.SpotLight(0xfff0d8, 2.4, 0, 0.8, 0.9, 2);
+    const s = new THREE.SpotLight(0xfff0d8, 2.6, 0, 0.98, 0.9, 2);
     s.position.set(p.x, p.y - 0.12, p.z);
     s.target.position.set(p.x * 0.9, FELT_Y, p.z);
     s.shadow.mapSize.set(qp.shadowMap, qp.shadowMap);
