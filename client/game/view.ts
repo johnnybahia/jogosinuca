@@ -1,7 +1,7 @@
 import * as THREE from 'three';
-import { aimTrace, cutAngle, pocketAim } from '../../shared/aim';
+import { aimTrace, cutAngle, pocketAim, previewCuePath } from '../../shared/aim';
 import { BALL_R, HL, HW, POCKETS } from '../../shared/table';
-import { Sim, strike, type BallPos, type ShotParams, type SimEvent } from '../../shared/physics';
+import { Sim, powerToSpeed, strike, type BallPos, type ShotParams, type SimEvent } from '../../shared/physics';
 import { Assets } from './assets';
 import { sndBall, sndCue, sndCushion, sndPocket } from './audio';
 import { BallsView } from './ballsView';
@@ -293,6 +293,11 @@ export class PoolView {
       const obj = info.hit >= 0 ? this.pos.find((p) => p.id === info.hit)! : null;
       const pk = obj ? pocketAim(obj.x, obj.y, info.objDx, info.objDy) : null;
       this.aimView.update(cue, dx, dy, info, obj, pk, this.guideFull);
+      // trajetória real da branca (seguir/puxar/efeito) a partir do contato, com a potência que o taco indica
+      if (this.guideFull) {
+        const p = Math.min(1, Math.max(0.35, (pull - 0.04) / 0.24));
+        this.aimView.setPath(previewCuePath(this.pos, dx, dy, powerToSpeed(p), a, b, 0.8));
+      } else this.aimView.setPath(null);
       // enquadramento: branca + ponto do contato + bola alvo + caçapa provável
       const pts = [{ x: cue.x, y: cue.y }];
       if (obj) {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { cutAngle, aimTrace, pocketAim } from './aim';
+import { cutAngle, aimTrace, pocketAim, previewCuePath } from './aim';
 import { HL, HW } from './table';
 import type { BallPos } from './physics';
 
@@ -36,5 +36,22 @@ describe('mira', () => {
     const meia = aimTrace(balls, 0, 0, Math.cos(a), Math.sin(a));
     expect(cutAngle(meia, Math.cos(a), Math.sin(a))).toBeGreaterThan(20);
     expect(cutAngle(meia, Math.cos(a), Math.sin(a))).toBeLessThan(40);
+  });
+
+  it('caminho real da branca: seguir vai para frente, puxar volta (e é rápido)', () => {
+    const balls: BallPos[] = [
+      { id: 0, x: -0.3, y: 0, on: true },
+      { id: 1, x: 0.2, y: 0, on: true },
+    ];
+    const t0 = performance.now();
+    const seguir = previewCuePath(balls, 1, 0, 3, 0, 0.5);
+    const puxar = previewCuePath(balls, 1, 0, 3, 0, -0.5);
+    const ms = performance.now() - t0;
+    expect(seguir.length).toBeGreaterThan(2);
+    expect(puxar.length).toBeGreaterThan(2);
+    expect(seguir[seguir.length - 1]!.x).toBeGreaterThan(seguir[0]!.x + 0.02);
+    expect(puxar[puxar.length - 1]!.x).toBeLessThan(puxar[0]!.x - 0.05);
+    console.log('preview ms (2 chamadas)', ms.toFixed(1));
+    expect(ms).toBeLessThan(100);
   });
 });

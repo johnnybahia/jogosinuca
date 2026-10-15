@@ -142,6 +142,7 @@ export class AimView {
   private main: Ribbon;
   private obj: Ribbon;
   private pocket: Ribbon;
+  private path: Ribbon[] = [];
   private pocketRing: THREE.Mesh;
   private cue: Ribbon;
   private ring: THREE.Mesh;
@@ -164,6 +165,11 @@ export class AimView {
     this.ghost.renderOrder = 3;
     this.objRing = new THREE.Mesh(new THREE.RingGeometry(BALL_R * 1.08, BALL_R * 1.2, 48).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ color: 0xffe27a, transparent: true, opacity: 0.8, depthWrite: false }));
     this.objRing.renderOrder = 4;
+    for (let i = 0; i < 24; i++) {
+      const r = new Ribbon(0xcfe8ff, 0.7, 0.0028, true, dash);
+      this.path.push(r);
+      this.group.add(r.mesh);
+    }
     this.group.add(this.main.mesh, this.obj.mesh, this.cue.mesh, this.pocket.mesh, this.pocketRing, this.ring, this.ghost, this.objRing);
     this.group.visible = false;
   }
@@ -212,7 +218,18 @@ export class AimView {
     }
   }
 
+  /** Caminho real da branca depois do primeiro contato (substitui a linha de saída geométrica). */
+  setPath(pts: { x: number; y: number }[] | null): void {
+    for (let i = 0; i < this.path.length; i++) {
+      const r = this.path[i]!;
+      if (pts && i + 1 < pts.length) r.set(pts[i]!.x, pts[i]!.y, pts[i + 1]!.x, pts[i + 1]!.y);
+      else r.mesh.visible = false;
+    }
+    if (pts && pts.length > 1) this.cue.mesh.visible = false;
+  }
+
   hide(): void {
     this.group.visible = false;
+    this.setPath(null);
   }
 }

@@ -1,5 +1,5 @@
 /** Geometria da mira: bola fantasma, desvio da branca e da bola alvo, primeira batida na tabela. Só geometria (sem giro). */
-import type { BallPos } from './physics';
+import { Sim, strike, type BallPos } from './physics';
 import { BALL_D, BALL_R, HL, HW, POCKETS } from './table';
 
 export interface AimInfo {
@@ -129,3 +129,38 @@ export function pocketAim(ox: number, oy: number, dx: number, dy: number): Pocke
 
 /** Ângulo de corte em graus (0 = bola reta). */
 export const cutAngle = (info: AimInfo, dx: number, dy: number): number => (info.hit < 0 ? 0 : (Math.acos(Math.min(1, Math.max(-1, dx * info.objDx + dy * info.objDy))) * 180) / Math.PI);
+
+/**
+ * Caminho real da branca (com giro e potência) a partir do primeiro contato (bola ou tabela): é o que a tacada vai fazer,
+ * inclusive seguir/puxar e efeito. Usa a mesma física do jogo; roda só até `maxLen` metros depois do contato.
+ */
+export function previewCuePath(pos: BallPos[], dx: number, dy: number, v: number, a: number, b: number, maxLen = 0.9): { x: number; y: number }[] {
+  const sim = Sim.from(pos);
+  const cue = sim.balls[0];
+  if (!cue || !cue.on) return [];
+  strike(cue, { dx, dy, v, a, b });
+  const pts: { x: number; y: number }[] = [];
+  let seen = 0;
+  let started = false;
+  let len = 0;
+  for (let n = 0; n < 6000 && sim.t < 6; n++) {
+    sim.step(sim.nextDt());
+    if (!started) {
+      for (; seen < sim.events.length; seen++) {
+        const e = sim.events[seen]!;
+        if ((e.k === 'ball' && (e.a === 0 || e.b === 0)) || (e.k === 'cushion' && e.a === 0)) started = true;
+      }
+      if (started) pts.push({ x: cue.x, y: cue.y });
+    } else {
+      const l = pts[pts.length - 1]!;
+      const d = Math.hypot(cue.x - l.x, cue.y - l.y);
+      if (d >= 0.03) {
+        pts.push({ x: cue.x, y: cue.y });
+        len += d;
+      }
+      if (len >= maxLen || !cue.on) break;
+    }
+    if (!sim.moving() || (!cue.on && !started)) break;
+  }
+  return pts;
+}
