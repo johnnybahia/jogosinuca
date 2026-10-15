@@ -1,12 +1,12 @@
 import * as THREE from 'three';
 import { aimTrace } from '../../shared/aim';
-import { POCKETS } from '../../shared/table';
+import { BALL_R, HL, HW, POCKETS } from '../../shared/table';
 import { Sim, strike, type BallPos, type ShotParams, type SimEvent } from '../../shared/physics';
 import { Assets } from './assets';
 import { sndBall, sndCue, sndCushion, sndPocket } from './audio';
 import { BallsView } from './ballsView';
 import { CameraRig, type CamMode } from './cameraRig';
-import { AimView, CueView } from './cueView';
+import { AimView, CUE_ELEVATION, CueView } from './cueView';
 import { PostFX } from './postfx';
 import { qualityProfile, resolveQuality, type Quality, type QualityProfile, type QualitySetting } from './quality';
 import { buildTable, FELTS, type TableParts } from './tableView';
@@ -231,6 +231,31 @@ export class PoolView {
     this.refreshAim();
   }
 
+  private cueEl = CUE_ELEVATION;
+
+  /** Elevação do taco: sobe o suficiente para a parte de trás passar por cima de bolas atrás da branca e das tabelas. */
+  private cueElev(pos: BallPos[], cx: number, cy: number, ang: number, b: number): number {
+    const dx = Math.cos(ang);
+    const dy = Math.sin(ang);
+    let need = 0;
+    for (const o of pos) {
+      if (o.id === 0 || !o.on) continue;
+      const rx = o.x - cx;
+      const ry = o.y - cy;
+      const along = -(rx * dx + ry * dy);
+      if (along <= 0 || along > 1.6) continue;
+      if (Math.abs(rx * dy - ry * dx) > BALL_R + 0.016) continue;
+      need = Math.max(need, Math.atan((BALL_R * (1 - b) + 0.012) / Math.max(0.03, along - BALL_R * 0.5)));
+    }
+    // tabela atrás da branca: o taco precisa passar por cima da madeira
+    const lim = (c: number, u: number, half: number): number => (Math.abs(u) < 1e-4 ? Infinity : (u < 0 ? half - c : half + c) / Math.abs(u));
+    const tn = Math.max(0.03, Math.min(lim(cx, dx, HL), lim(cy, dy, HW)));
+    need = Math.max(need, Math.atan(0.034 / tn));
+    const target = Math.min(0.75, Math.max(CUE_ELEVATION, need));
+    this.cueEl += (target - this.cueEl) * 0.4;
+    return this.cueEl;
+  }
+
   private refreshAim(): void {
     if (this.sim) return;
     const cue = this.pos.find((p) => p.id === 0);
@@ -244,7 +269,7 @@ export class PoolView {
     this.cam.tx = cue.x;
     this.cam.ty = cue.y;
     if (this.cueOn) {
-      this.cue.place(cue.x, cue.y, angle, a, b, pull);
+      this.cue.place(cue.x, cue.y, angle, a, b, pull, this.cueElev(this.pos, cue.x, cue.y, angle, b));
       this.cue.setVisible(true);
     }
     if (this.aimOn) {
@@ -426,7 +451,7 @@ export class PoolView {
       const cue = this.strikeStart.find((p) => p.id === 0)!;
       const ang = Math.atan2(this.strikeShot.dy, this.strikeShot.dx);
       const pull = this.strikeFromPull * (1 - e);
-      this.cue.place(cue.x, cue.y, ang, this.aim.a, this.aim.b, pull);
+      this.cue.place(cue.x, cue.y, ang, this.aim.a, this.aim.b, pull, this.cueElev(this.strikeStart, cue.x, cue.y, ang, this.aim.b));
       if (k >= 1) {
         this.strikeT = -1;
         this.startSim();
@@ -437,7 +462,7 @@ export class PoolView {
       this.followT += dt;
       const cue = this.strikeStart.find((p) => p.id === 0)!;
       const ang = Math.atan2(this.strikeShot!.dy, this.strikeShot!.dx);
-      this.cue.place(cue.x, cue.y, ang, this.aim.a, this.aim.b, -Math.min(0.05, this.followT * 0.4));
+      this.cue.place(cue.x, cue.y, ang, this.aim.a, this.aim.b, -Math.min(0.05, this.followT * 0.4), this.cueEl);
       if (this.followT > 0.45) {
         this.cue.setVisible(false);
         this.strikeT = -1;

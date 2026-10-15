@@ -55,8 +55,8 @@ function worldGeometry(name, mapFn) {
 
 // ---------------- mesa
 {
-  const NOSE_L = 115.15; // meio comprimento do campo no modelo (cm), medido nas tabelas
-  const NOSE_W = 56.0;
+  const NOSE_L = 112.8; // meio comprimento do campo no modelo (cm), medido com raios na altura do centro da bola
+  const NOSE_W = 56.81;
   const FELT_Y_M = 76.0; // cm
   const sl = HL / (NOSE_L * 0.01);
   const sw = HW / (NOSE_W * 0.01);
