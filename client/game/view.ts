@@ -205,7 +205,7 @@ export class PoolView {
   setCameraMode(m: CamMode): void {
     this.cam.mode = m;
     // vista de cima: a luminária atrapalha
-    this.table.lampGroup.visible = m !== 'top';
+    this.lampOn = m !== 'top';
   }
 
   /** Mostra o taco e a mira (ou esconde). A bola branca precisa estar na mesa. */
@@ -439,12 +439,17 @@ export class PoolView {
     if (this.sim) this.stepSim(dt);
     this.balls.update(dt);
     this.table.update(dt);
+    if (!this.lampBottom) this.lampBottom = new THREE.Box3().setFromObject(this.table.lampGroup).min.y;
+    // a luminária fica no caminho quando a câmera sobe: some enquanto a câmera estiver perto da altura dela
+    this.table.lampGroup.visible = this.lampOn && (this.cam.mode === 'menu' || this.cam.camera.position.y < this.lampBottom - 0.35);
     this.cam.update(dt, this.sim && this.followCue ? this.followTarget() : undefined);
     this.onFrame?.(dt);
     if (this.post.enabled) this.post.render(dt, this.time);
     else this.renderer.render(this.scene, this.cam.camera);
   }
   private followT = 0;
+  private lampOn = true;
+  private lampBottom = 0;
 
   dispose(): void {
     this.stop();
