@@ -62,15 +62,41 @@ export async function installApp(): Promise<void> {
   }
 }
 
+/** Última saída: apaga service worker e cache e baixa tudo de novo (sempre pega a versão publicada). */
+async function hardRefresh(): Promise<void> {
+  try {
+    const regs = await navigator.serviceWorker.getRegistrations();
+    await Promise.all(regs.map((r) => r.unregister()));
+    for (const k of await caches.keys()) if (k.startsWith('sinuca-')) await caches.delete(k);
+  } catch {
+    /* segue para o reload */
+  }
+  location.reload();
+}
+
 /** Troca para a versão que está esperando e recarrega quando ela assumir. */
 export async function applyUpdate(): Promise<void> {
   try {
     const reg = await navigator.serviceWorker.getRegistration(import.meta.env.BASE_URL);
-    if (!reg?.waiting) return location.reload();
-    navigator.serviceWorker.addEventListener('controllerchange', () => location.reload(), { once: true });
-    reg.waiting.postMessage({ type: 'SKIP_WAITING' });
+    if (!reg?.waiting) {
+      await reg?.update().catch(() => {});
+      if (!reg?.waiting) return void (await hardRefresh());
+    }
+    let done = false;
+    navigator.serviceWorker.addEventListener(
+      'controllerchange',
+      () => {
+        done = true;
+        location.reload();
+      },
+      { once: true },
+    );
+    reg!.waiting!.postMessage({ type: 'SKIP_WAITING' });
+    window.setTimeout(() => {
+      if (!done) void hardRefresh();
+    }, 3000);
   } catch {
-    location.reload();
+    void hardRefresh();
   }
 }
 
