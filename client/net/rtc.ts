@@ -82,6 +82,8 @@ export class RtcMesh {
   }
 
   async handle(from: string, data: Signal): Promise<void> {
+    // sinal que chega antes de nós sabermos do colega (corrida na entrada): cria o par na hora em vez de perder a oferta
+    if (!this.peers.has(from) && from !== this.o.myId) this.create(from);
     const peer = this.peers.get(from);
     if (!peer) return;
     const pc = peer.pc;

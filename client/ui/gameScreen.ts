@@ -57,6 +57,8 @@ export class GameScreen {
   private lobby: LobbyPanel | null = null;
   private pill: HTMLElement | null = null;
   private rtc: RtcMesh | null = null;
+  /** identifica o "momento" da mesa: atualizações do servidor que não mudam isso (vídeo, conexão…) não reiniciam a mira */
+  private turnKey = '';
   private peerIds: string[] = [];
   private offPwa: (() => void) | null = null;
 
@@ -206,6 +208,12 @@ export class GameScreen {
       this.hud.setEnabled(false);
       return;
     }
+    const key = `${v.gamesDone}:${v.shotSeq}:${m.turn}:${m.inHand}:${v.phase}`;
+    if (!afterShot && key === this.turnKey && !m.over) {
+      this.pendingShot = this.phase === 'shooting' ? this.pendingShot : false;
+      return; // mesmo momento: só o placar/relógio mudaram
+    }
+    this.turnKey = key;
     if (v.shotSeq !== this.lastSeq || !afterShot) {
       // snap nas posições oficiais (também cobre reconexão)
       if (!this.pendingShot || v.shotSeq !== prevSeq) this.view.setBalls(m.balls);
@@ -213,6 +221,7 @@ export class GameScreen {
     this.lastSeq = v.shotSeq;
     this.pendingShot = false;
     if (v.phase === 'ended' || m.over) {
+      this.turnKey = '';
       this.phase = 'wait';
       this.hud.setEnabled(false);
       this.view.setAim(null);
