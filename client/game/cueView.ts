@@ -78,7 +78,10 @@ export class CueView {
   }
 
   /** Taco translúcido enquanto se mira: não esconde a bola nem a linha de mira. */
+  private faded: boolean | null = null;
   setFade(on: boolean): void {
+    if (this.faded === on) return;
+    this.faded = on;
     this.group.traverse((o) => {
       const m = o as THREE.Mesh;
       if (!m.isMesh) return;
