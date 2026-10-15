@@ -162,6 +162,14 @@ export class PoolView {
     return this.quality;
   }
 
+  setTable(id: string): void {
+    this.table.setTable(id);
+  }
+
+  setCue(id: string): void {
+    this.cue.setModel(id);
+  }
+
   setWood(id: string): void {
     this.table.setWood(id);
   }

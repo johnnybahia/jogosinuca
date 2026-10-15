@@ -27,6 +27,8 @@ export interface TableParts {
   floor: THREE.Mesh;
   setFelt(theme: FeltTheme): void;
   setWood(id: string): void;
+  /** 'pacote' = mesa do pacote fornecido; qualquer outro = mesa montada por código */
+  setTable(id: string): void;
   setProfile(p: QualityProfile): void;
   cones: THREE.Mesh[];
   /** poeira flutuando na luz (só nas qualidades média/alta) */
@@ -69,8 +71,9 @@ function feltGeometry(): THREE.BufferGeometry {
 
 export async function buildTable(assets: Assets, qp: QualityProfile, renderer: THREE.WebGLRenderer): Promise<TableParts> {
   assets.maxAniso = Math.min(qp.anisotropy, renderer.capabilities.getMaxAnisotropy());
-  const [tableGltf, lampGltf, feltTex, feltN, woodTex, woodN, woodMc, woodMn, marC, marN, marR] = await Promise.all([
+  const [tableGltf, table2Gltf, lampGltf, feltTex, feltN, woodTex, woodN, woodMc, woodMn, marC, marN, marR] = await Promise.all([
     assets.gltf('models/table.glb'),
+    assets.gltf('models/table2.glb'),
     assets.gltf('models/lamp.glb'),
     assets.texture('tex/felt.jpg', { repeat: true }),
     assets.texture('tex/felt_n.jpg', { repeat: true, srgb: false }),
@@ -151,6 +154,32 @@ export async function buildTable(assets: Assets, qp: QualityProfile, renderer: T
     holder.position.set(p.x, 0.0408, -p.y);
     group.add(holder);
   }
+
+  // ---------- mesa do pacote (alternativa): pano recolorível + madeira da própria textura
+  const tableA = [...group.children];
+  const groupB = new THREE.Group();
+  const clothB = new THREE.MeshPhysicalMaterial({ color: FELTS[0]!.color, roughness: 1, metalness: 0, sheen: 0.35, sheenRoughness: 0.7, sheenColor: new THREE.Color(0x3fbf70) });
+  table2Gltf.scene.traverse((o) => {
+    const m = o as THREE.Mesh;
+    if (!m.isMesh) return;
+    const src = m.material as THREE.MeshStandardMaterial;
+    m.castShadow = true;
+    m.receiveShadow = true;
+    if (m.name === 'cloth') {
+      clothB.map = src.map;
+      m.material = clothB;
+    } else {
+      m.material = new THREE.MeshPhysicalMaterial({ map: src.map, roughness: 0.5, metalness: 0, clearcoat: 0.3, clearcoatRoughness: 0.35 });
+    }
+  });
+  groupB.add(table2Gltf.scene);
+  groupB.visible = false;
+  group.add(groupB);
+  const setTable = (id: string): void => {
+    const b = id === 'pacote';
+    for (const c of tableA) c.visible = !b;
+    groupB.visible = b;
+  };
 
   // ---------- chão de mármore, paredes e teto
   marC.repeat.set(5, 5);
@@ -310,6 +339,7 @@ export async function buildTable(assets: Assets, qp: QualityProfile, renderer: T
 
   const setFelt = (theme: FeltTheme): void => {
     feltMat.color.setHex(theme.color);
+    clothB.color.setHex(theme.color);
     clothMat.color.setHex(theme.dark === 0 ? theme.color : theme.color).multiplyScalar(0.72);
     const sh = new THREE.Color(theme.color).lerp(new THREE.Color(0xffffff), 0.35);
     feltMat.sheenColor.copy(sh);
@@ -328,7 +358,7 @@ export async function buildTable(assets: Assets, qp: QualityProfile, renderer: T
   setFelt(FELTS[0]!);
   setProfile(qp);
 
-  return { group: outer, felt, cushions, frame, lampGroup, spots, bulbs, floor, setFelt, setWood, setProfile, cones, dust, update };
+  return { group: outer, felt, cushions, frame, lampGroup, spots, bulbs, floor, setFelt, setWood, setTable, setProfile, cones, dust, update };
 }
 
 /** Papel de parede escuro com lambri de madeira na parte de baixo (feito em canvas, sem arquivo). */

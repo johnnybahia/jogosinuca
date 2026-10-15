@@ -482,8 +482,12 @@ export class GameScreen {
   }
   /** Madeira da mesa: a escolhida, ou sorteada a cada partida. */
   private applyWood(): void {
-    const w = loadPrefs().wood;
-    this.view.setWood(w === 'aleatoria' ? (Math.random() < 0.5 ? 'classica' : 'mogno') : w);
+    const pr = loadPrefs();
+    const opts = ['classica', 'mogno', 'pacote'];
+    const w = pr.wood === 'aleatoria' ? opts[Math.floor(Math.random() * opts.length)]! : pr.wood;
+    this.view.setTable(w === 'pacote' ? 'pacote' : 'codigo');
+    if (w !== 'pacote') this.view.setWood(w);
+    this.view.setCue(pr.cue === 'aleatorio' ? (Math.random() < 0.5 ? 'pacote' : 'classico') : pr.cue);
   }
 
   private toggleZoom(): void {
@@ -742,9 +746,13 @@ export class GameScreen {
         savePrefs({ ...loadPrefs(), felt: id });
         this.view.setFelt(id);
       })),
-      h('div', { class: 'setting' }, h('span', { text: 'Madeira da mesa' }), segmented([{ value: 'aleatoria', label: 'Aleatória' }, { value: 'classica', label: 'Clássica' }, { value: 'mogno', label: 'Mogno' }], p.wood, (id) => {
+      h('div', { class: 'setting' }, h('span', { text: 'Madeira da mesa' }), segmented([{ value: 'aleatoria', label: 'Aleatória' }, { value: 'classica', label: 'Clássica' }, { value: 'mogno', label: 'Mogno' }, { value: 'pacote', label: 'Pacote' }], p.wood, (id) => {
         savePrefs({ ...loadPrefs(), wood: id });
         this.applyWood();
+      })),
+      h('div', { class: 'setting' }, h('span', { text: 'Taco' }), segmented([{ value: 'aleatorio', label: 'Aleatório' }, { value: 'classico', label: 'Clássico' }, { value: 'pacote', label: 'Pacote' }], p.cue, (id) => {
+        savePrefs({ ...loadPrefs(), cue: id });
+        this.view.setCue(id === 'aleatorio' ? (Math.random() < 0.5 ? 'pacote' : 'classico') : id);
       })),
       online ? h('div', { class: 'row' }, btn(this.rtc?.camOn ? '📷 Câmera ligada' : '🚫 Câmera desligada', () => { void this.toggleMedia('cam').then(() => this.overlay?.close()); }), btn(this.rtc?.micOn ? '🎤 Microfone ligado' : '🔇 Microfone desligado', () => { void this.toggleMedia('mic').then(() => this.overlay?.close()); })) : null,
       this.backend.isPractice ? btn('Reorganizar o triângulo', () => { this.overlay?.close(); this.backend.rerack?.(); }) : null,

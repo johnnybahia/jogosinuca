@@ -13,11 +13,28 @@ export class CueView {
   length = 1.43;
 
   static async create(assets: Assets): Promise<CueView> {
-    const g = await assets.gltf('models/cue.glb');
-    return new CueView(g.scene);
+    const [g, g2] = await Promise.all([assets.gltf('models/cue.glb'), assets.gltf('models/cue2.glb')]);
+    return new CueView(g.scene, g2.scene);
   }
 
-  constructor(model: THREE.Object3D) {
+  private models: Record<string, THREE.Object3D> = {};
+
+  /** 'pacote' = taco do pacote fornecido; qualquer outro = taco clássico */
+  setModel(id: string): void {
+    for (const [k, m] of Object.entries(this.models)) m.visible = k === (id === 'pacote' ? 'pacote' : 'classico');
+  }
+
+  constructor(model: THREE.Object3D, model2: THREE.Object3D) {
+    this.models = { classico: model, pacote: model2 };
+    model2.visible = false;
+    model2.traverse((o) => {
+      const m = o as THREE.Mesh;
+      if (m.isMesh) {
+        m.castShadow = true;
+        m.receiveShadow = false;
+      }
+    });
+    this.group.add(model2);
     model.traverse((o) => {
       const m = o as THREE.Mesh;
       if (m.isMesh) {
