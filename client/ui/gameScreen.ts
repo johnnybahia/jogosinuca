@@ -678,7 +678,7 @@ export class GameScreen {
     const p = loadPrefs();
     const volIn = h('input', { class: 'range', attrs: { type: 'range', min: '0', max: '100', value: String(Math.round(getVolume() * 100)) } });
     volIn.addEventListener('input', () => setVolume(Number(volIn.value) / 100));
-    const sensIn = h('input', { class: 'range', attrs: { type: 'range', min: '50', max: '200', value: String(Math.round(p.sens * 100)) } });
+    const sensIn = h('input', { class: 'range', attrs: { type: 'range', min: '30', max: '200', value: String(Math.round(p.sens * 100)) } });
     sensIn.addEventListener('input', () => savePrefs({ ...loadPrefs(), sens: Number(sensIn.value) / 100 }));
     const upd = getPwa().update ? btn('Atualizar o jogo', () => void applyUpdate(), 'primary') : null;
     const online = this.backend.mode === 'online';

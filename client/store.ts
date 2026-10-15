@@ -109,7 +109,7 @@ export function loadPrefs(): Prefs {
         quality: p.quality === 'high' || p.quality === 'medium' || p.quality === 'low' ? p.quality : 'auto',
         felt: typeof p.felt === 'string' ? p.felt : 'verde',
         guide: p.guide !== false,
-        sens: typeof p.sens === 'number' ? Math.min(2, Math.max(0.5, p.sens)) : 1,
+        sens: typeof p.sens === 'number' ? Math.min(2, Math.max(0.3, p.sens)) : 1,
         size: p.size === 1 || p.size === 2 ? p.size : 0,
         calm: p.calm === true,
       };

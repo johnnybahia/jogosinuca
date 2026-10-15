@@ -107,7 +107,7 @@ export class AimInput {
       const p = this.view.cam.pick(n.x, n.y);
       if (p) this.cb.pointAt(p.x, p.y);
     } else if (mode === 'aim' && this.dragging) {
-      const k = 0.0042 * this.cb.sens() * clamp(this.view.cam.userDist / 1.05, 0.35, 1.8);
+      const k = 0.0027 * this.cb.sens() * clamp(this.view.cam.userDist / 1.05, 0.35, 1.8);
       this.cb.rotate(-dx * k * (e.shiftKey ? 0.25 : 1));
       if (Math.abs(dy) > Math.abs(dx) * 1.6 && e.pointerType === 'mouse' && e.altKey) this.tilt(dy * 0.004);
     }
