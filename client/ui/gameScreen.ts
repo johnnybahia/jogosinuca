@@ -11,7 +11,7 @@ import { avatarColor, loadPrefs, loadStats, savePrefs, saveStats, type Profile }
 import { BOT_LABEL, BOT_LEVELS, type BotLevel } from '../../shared/bot';
 import type { AimMsg, RoomView, ShotEvent } from '../../shared/protocol';
 import { MODES, groupName, nearestFree, targets, type MatchState } from '../../shared/rules';
-import { getPwa, applyUpdate } from '../pwa';
+import { getPwa, applyUpdate, onPwa } from '../pwa';
 import { qualityOptions } from './settings';
 import { LobbyPanel } from './lobby';
 
@@ -57,6 +57,8 @@ export class GameScreen {
   private countedGame = -1;
   private connBanner: HTMLElement | null = null;
   private lobby: LobbyPanel | null = null;
+  private pill: HTMLElement | null = null;
+  private offPwa: (() => void) | null = null;
 
   constructor(private o: GameOpts) {
     this.view = o.view;
@@ -115,6 +117,7 @@ export class GameScreen {
       },
       onConn: (s) => this.onConn(s),
     };
+    this.offPwa = onPwa((st) => this.setUpdate(st.update));
     (window as unknown as { __game: GameScreen }).__game = this;
     be.connect();
   }
@@ -473,6 +476,14 @@ export class GameScreen {
 
   private onSimEvent(_ev: SimEvent): void {}
 
+  private buzz(ms: number | number[]): void {
+    try {
+      navigator.vibrate?.(ms);
+    } catch {
+      /* sem vibração */
+    }
+  }
+
   private shotDone(e: ShotEvent): void {
     this.animating = false;
     const out = e.out;
@@ -480,10 +491,12 @@ export class GameScreen {
     const who = this.v?.players.find((p) => p.seat === e.by)?.name ?? '';
     if (out.foul) {
       sndFoul();
+      this.buzz([60, 40, 60]);
       this.hud.showBanner('FALTA', `${who}: ${out.foul}`, 'bad', 2600);
       if (mine) this.streak = 0;
     } else if (out.potted.length) {
       this.hud.showBanner(out.potted.length > 1 ? `${out.potted.length} bolas!` : 'Caçapa!', mine ? 'Continue jogando' : `${who} continua`, mine ? 'good' : 'info', 1700);
+      if (mine) this.buzz(35);
       if (mine) {
         this.streak += out.potted.length;
         const st = loadStats();
@@ -538,6 +551,32 @@ export class GameScreen {
       const left = (v.turnEndsAt - (Date.now() + this.clockOffset)) / 1000;
       this.hud.setTimer(left, this.myTurn);
     } else this.hud.setTimer(null, false);
+  }
+
+  // ---------- atualização do jogo ----------
+  private setUpdate(on: boolean): void {
+    if (on && !this.pill && !this.done) {
+      this.pill = h('button', { class: 'upd-pill', text: '⬆ Nova versão disponível', attrs: { type: 'button' }, on: { click: () => this.askUpdate() } });
+      this.o.root.append(this.pill);
+    } else if (!on && this.pill) {
+      this.pill.remove();
+      this.pill = null;
+    }
+  }
+
+  private askUpdate(): void {
+    if (this.overlay) return;
+    const online = this.backend.mode === 'online';
+    const box = h(
+      'div',
+      { class: 'panel menu-modal' },
+      h('h2', { text: 'Atualizar o jogo' }),
+      h('p', { class: 'muted', text: online ? 'O jogo vai recarregar e você volta para a mesma partida.' : 'O jogo vai recarregar e esta partida contra o computador será reiniciada.' }),
+      h('div', { class: 'row' }, btn('Atualizar agora', () => void applyUpdate(), 'primary'), btn('Depois', () => this.overlay?.close(), 'ghost')),
+    );
+    this.overlay = modal(box, () => {
+      this.overlay = null;
+    });
   }
 
   // ---------- menus ----------
@@ -643,6 +682,8 @@ export class GameScreen {
     this.overlay?.close();
     this.connBanner?.remove();
     this.lobby?.el.remove();
+    this.pill?.remove();
+    this.offPwa?.();
     this.backend.leave();
     this.o.root.replaceChildren();
     this.o.onExit();

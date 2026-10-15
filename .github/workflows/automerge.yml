@@ -1,0 +1,22 @@
+name: Merge automático
+# Liga o auto-merge em todo PR. O GitHub só funde quando os checks obrigatórios passarem — configure em
+# Settings → Branches → regra para `main` → "Require status checks" → marque "test", e em
+# Settings → General → "Allow auto-merge".
+on:
+  pull_request:
+    types: [opened, reopened, synchronize, ready_for_review]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  automerge:
+    if: github.event.pull_request.draft == false
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ativar auto-merge (squash)
+        run: gh pr merge --auto --squash "$PR_URL"
+        env:
+          PR_URL: ${{ github.event.pull_request.html_url }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

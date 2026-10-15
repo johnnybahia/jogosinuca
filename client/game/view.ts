@@ -59,6 +59,12 @@ export class PoolView {
   private followCue = true;
   timeScale = 1;
   onFrame: ((dt: number) => void) | null = null;
+  /** chamado quando o aparelho não aguenta a qualidade atual (só faz sentido no modo automático) */
+  onSlow: ((q: Quality) => void) | null = null;
+  private perfT = 0;
+  private perfN = 0;
+  private perfSum = 0;
+  private perfWarm = 0;
 
   private constructor(readonly canvas: HTMLCanvasElement, setting: QualitySetting) {
     this.quality = resolveQuality(setting);
@@ -140,9 +146,19 @@ export class PoolView {
   }
 
   setQuality(setting: QualitySetting): void {
-    this.quality = resolveQuality(setting);
-    this.qp = qualityProfile(this.quality);
+    this.setLevel(resolveQuality(setting));
+  }
+
+  setLevel(q: Quality): void {
+    this.quality = q;
+    this.qp = qualityProfile(q);
     this.applyProfile();
+    this.perfSum = this.perfN = this.perfT = 0;
+    this.perfWarm = 0;
+  }
+
+  get level(): Quality {
+    return this.quality;
   }
 
   setFelt(id: string): void {
@@ -338,6 +354,20 @@ export class PoolView {
 
   private frame(dt: number): void {
     this.time += dt;
+    // monitor de desempenho: se a média passar de ~30 fps por alguns segundos, pede para baixar a qualidade
+    if (document.visibilityState === 'visible' && dt < 0.2) {
+      this.perfWarm += dt;
+      if (this.perfWarm > 4) {
+        this.perfSum += dt;
+        this.perfN++;
+        this.perfT += dt;
+        if (this.perfT >= 3) {
+          const avg = this.perfSum / this.perfN;
+          this.perfSum = this.perfN = this.perfT = 0;
+          if (avg > 0.036 && this.quality !== 'low') this.onSlow?.(this.quality === 'high' ? 'medium' : 'low');
+        }
+      }
+    }
     // animação do taco
     if (this.strikeT >= 0 && this.strikeShot) {
       this.strikeT += dt;

@@ -247,3 +247,5 @@ input { font: inherit; }
 .lobby-settings { display: grid; gap: 2px; }
 .btn.disabled { opacity: 0.5; filter: grayscale(0.6); }
 @media (max-width: 520px) { .slots { grid-template-columns: 1fr; } .code-big { font-size: 2rem; } }
+
+.upd-pill { position: absolute; left: 50%; top: calc(var(--sat) + 62px); transform: translateX(-50%); appearance: none; border: 1px solid #f4dc8c; background: linear-gradient(180deg, #f1d57c, var(--gold2)); color: #1b1305; font-weight: 700; font-size: 0.8rem; padding: 6px 14px; border-radius: 999px; cursor: pointer; box-shadow: 0 6px 20px rgba(0, 0, 0, 0.5); z-index: 5; animation: pop 0.3s; }

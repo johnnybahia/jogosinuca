@@ -30,6 +30,11 @@ try {
   throw e;
 }
 view.setFelt(loadPrefs().felt);
+view.onSlow = (q) => {
+  if (loadPrefs().quality !== 'auto') return;
+  view.setLevel(q);
+  toast(q === 'low' ? 'Gráficos reduzidos para manter a fluidez.' : 'Gráficos ajustados para o seu aparelho.');
+};
 const m0 = newMatch('par_impar');
 view.setBalls(m0.balls);
 view.setAim(null);
