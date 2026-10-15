@@ -72,7 +72,7 @@ export async function buildTable(assets: Assets, qp: QualityProfile, renderer: T
     assets.texture('tex/felt_n.jpg', { repeat: true, srgb: false }),
     assets.texture('tex/wood.jpg', { repeat: true }),
     assets.texture('tex/wood_n.jpg', { repeat: true, srgb: false }),
-    assets.texture('tex/marble_c.jpg', { repeat: true }),
+    assets.texture(qp.hiTex ? 'tex/marble_c.jpg' : 'tex/marble_c_s.jpg', { repeat: true }),
     assets.texture('tex/marble_n.jpg', { repeat: true, srgb: false }),
     assets.texture('tex/marble_r.jpg', { repeat: true, srgb: false }),
   ]);

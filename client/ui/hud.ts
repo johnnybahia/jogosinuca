@@ -326,6 +326,7 @@ export class Hud {
   /** Atualiza cartões, bandejas e informações da partida. */
   update(v: RoomView, photos: Record<string, string>, myId: string): void {
     const m = v.match;
+    this.root.classList.toggle('practice', !!v.practice);
     for (let seat = 0; seat < 2; seat++) {
       const p = v.players.find((x) => x.seat === seat);
       this.renderCard(seat, p, m, v, photos, myId);
@@ -333,7 +334,7 @@ export class Hud {
     }
     for (const [id, el] of this.videos) if (!el.isConnected || !this.root.querySelector('.hud-top')?.contains(el)) this.holder.append(el), void id;
     const mode = MODES.find((x) => x.id === v.mode);
-    const kids: (HTMLElement | string)[] = [h('div', { class: 'mode', text: mode?.short ?? '' })];
+    const kids: (HTMLElement | string)[] = [h('div', { class: 'mode', text: v.practice ? 'Treino livre' : mode?.short ?? '' })];
     if (v.bestOf > 1) kids.push(h('div', { class: 'series', text: `Melhor de ${v.bestOf} · ${v.gamesDone}/${v.bestOf}` }));
     this.info.replaceChildren(...(kids as HTMLElement[]));
   }
@@ -347,7 +348,8 @@ export class Hud {
     }
     const g: Group | null = m ? m.groups[seat] ?? null : null;
     let sub = '';
-    if (m) {
+    if (v.practice && m) sub = `${m.tray.length} na caçapa`;
+    else if (m) {
       if (v.mode === 'bola61') sub = `${m.score[seat] ?? 0} / ${POINTS_TO_WIN} pts`;
       else sub = g ? `${groupName(g)} · ${m.score[seat] ?? 0}/7` : 'Mesa aberta';
     }
@@ -367,6 +369,10 @@ export class Hud {
     const tray = this.trays[seat]!;
     tray.replaceChildren();
     if (!m || !p) return;
+    if (this.root.classList.contains('practice')) {
+      if (seat === 0) for (const id of m.tray.filter((x) => x > 0)) tray.append(ballIcon(id, 18));
+      return;
+    }
     if (m.mode === 'bola61') {
       // na 61 a bandeja mostra o que o jogador fez nas últimas tacadas: aqui, só as bolas restantes numa linha única no centro
       if (seat === 0) {

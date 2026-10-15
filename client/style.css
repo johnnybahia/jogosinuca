@@ -261,3 +261,4 @@ input { font: inherit; }
 @keyframes bubble { 0% { transform: translateY(8px) scale(0.6); opacity: 0; } 10% { transform: none; opacity: 1; } 85% { opacity: 1; } 100% { opacity: 0; transform: translateY(-6px); } }
 .pside { position: relative; }
 .pside.seat1 .emote-bubble { right: 0; }
+.hud.practice .pside.seat1 { visibility: hidden; }

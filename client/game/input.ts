@@ -11,7 +11,6 @@ export interface InputCallbacks {
   /** arrasta a bola branca (bola na mão); retorna true se pegou a bola */
   place(x: number, y: number, start: boolean): void;
   sens(): number;
-  cuePos(): { x: number; y: number } | null;
 }
 
 const clamp = (v: number, a: number, b: number): number => Math.min(b, Math.max(a, v));

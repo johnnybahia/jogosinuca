@@ -1,4 +1,3 @@
-import { aimTrace } from '../../shared/aim';
 import { powerToSpeed, type BallPos, type SimEvent } from '../../shared/physics';
 import { avatarEl, btn, h, modal, toast, segmented } from './dom';
 import { Hud } from './hud';
@@ -8,7 +7,6 @@ import { getVolume, isMuted, setMuted, setVolume, sndClick, sndFoul, sndLose, sn
 import { FELTS } from '../game/tableView';
 import type { AimState, PoolView } from '../game/view';
 import { avatarColor, loadPrefs, loadStats, savePrefs, saveStats, type Profile } from '../store';
-import { BOT_LABEL, BOT_LEVELS, type BotLevel } from '../../shared/bot';
 import type { AimMsg, RoomView, ShotEvent } from '../../shared/protocol';
 import { MODES, groupName, nearestFree, targets, type MatchState } from '../../shared/rules';
 import { getPwa, applyUpdate, onPwa } from '../pwa';
@@ -26,8 +24,6 @@ export interface GameOpts {
 }
 
 type Phase = 'wait' | 'aim' | 'place' | 'shooting';
-
-const clamp = (v: number, a: number, b: number): number => Math.min(b, Math.max(a, v));
 
 /** Tela da partida: liga o backend (local ou online) à cena 3D, aos controles e à interface. */
 export class GameScreen {
@@ -92,7 +88,6 @@ export class GameScreen {
       pointAt: (x, y) => this.pointAt(x, y),
       place: (x, y) => this.dragCue(x, y),
       sens: () => loadPrefs().sens,
-      cuePos: () => this.placed,
     });
     window.addEventListener('keydown', this.onKeyDown);
     window.addEventListener('keyup', this.onKeyUp);
@@ -471,7 +466,6 @@ export class GameScreen {
     this.hud.setPlacing(false);
     const mine = e.by === this.mySeat;
     const ang = Math.atan2(e.shot.dy, e.shot.dx);
-    const sp = this.hud.spinNow;
     if (!mine) {
       // o adversário mira um instante antes de bater
       const from = Number.isFinite(this.aim.angle) ? this.aim.angle : ang;
@@ -485,7 +479,6 @@ export class GameScreen {
       this.aim = { angle: ang, a: e.shot.a, b: e.shot.b, pull: Math.max(0.05, this.aim.pull) };
       this.play(e);
     }
-    void sp;
   }
 
   private play(e: ShotEvent): void {
@@ -659,6 +652,7 @@ export class GameScreen {
         this.view.setFelt(id);
       })),
       online ? h('div', { class: 'row' }, btn(this.rtc?.camOn ? '📷 Câmera ligada' : '🚫 Câmera desligada', () => { void this.toggleMedia('cam').then(() => this.overlay?.close()); }), btn(this.rtc?.micOn ? '🎤 Microfone ligado' : '🔇 Microfone desligado', () => { void this.toggleMedia('mic').then(() => this.overlay?.close()); })) : null,
+      this.backend.isPractice ? btn('Reorganizar o triângulo', () => { this.overlay?.close(); this.backend.rerack?.(); }) : null,
       upd,
       h('div', { class: 'row' }, btn('Continuar', () => this.overlay?.close(), 'primary'), btn('Sair da partida', () => this.confirmExit(), 'danger')),
     );
@@ -744,7 +738,3 @@ export class GameScreen {
   }
 }
 
-export { BOT_LABEL, BOT_LEVELS };
-export type { BotLevel };
-void aimTrace;
-void clamp;

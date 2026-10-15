@@ -90,13 +90,13 @@ function menu(): void {
   );
 }
 
-function startOffline(cfg: OfflineSettings): void {
+function startOffline(cfg: OfflineSettings, practice = false): void {
   if (!profile) return;
   stopMenu?.();
   stopMenu = null;
   new GameScreen({
     view,
-    backend: new LocalBackend(profile, cfg),
+    backend: new LocalBackend(profile, cfg, practice),
     profile,
     root,
     onExit: () => menu(),
@@ -127,4 +127,3 @@ menu();
 const invite = new URLSearchParams(location.search).get('sala')?.toUpperCase();
 if (invite && /^[A-Z0-9]{5}$/.test(invite) && profile) startOnline(invite);
 (window as unknown as { done: boolean }).done = true;
-void toast;

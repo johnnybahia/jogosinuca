@@ -1,7 +1,7 @@
 import { BOT_LABEL, BOT_LEVELS, BOT_NAMES, type BotLevel } from '../../shared/bot';
 import { NAME_MAX, TURN_SECONDS_OPTIONS, turnLabel, type TurnSeconds } from '../../shared/protocol';
 import { MODES, type Mode } from '../../shared/rules';
-import { applyUpdate, getPwa, installApp, isIos, onPwa } from '../pwa';
+import { applyUpdate, installApp, isIos, onPwa } from '../pwa';
 import { avatarColor, loadOfflineSettings, loadPrefs, loadStats, newId, photoFromFile, saveOfflineSettings, savePrefs, saveProfile, type OfflineSettings, type Profile } from '../store';
 import { avatarEl, btn, clear, h, modal, segmented, toast } from './dom';
 import { FELTS } from '../game/tableView';
@@ -11,7 +11,7 @@ import { qualityOptions } from './settings';
 export interface MenuActions {
   profile: Profile;
   onProfile(p: Profile): void;
-  startOffline(cfg: OfflineSettings): void;
+  startOffline(cfg: OfflineSettings, practice?: boolean): void;
   setQuality(q: ReturnType<typeof loadPrefs>['quality']): void;
   setFelt(id: string): void;
   /** só online */
@@ -178,11 +178,11 @@ export function showMenu(root: HTMLElement, a: MenuActions, onEditProfile: () =>
     if (s.installable) pwaBox.append(btn('Instalar app', () => void installApp(), 'small'));
     else if (isIos() && !s.standalone) pwaBox.append(h('div', { class: 'pwa-line muted', text: 'iPhone: Compartilhar → Adicionar à Tela de Início' }));
   });
-  void getPwa;
   const st = loadStats();
   const chip = h('button', { class: 'chip', attrs: { type: 'button' }, on: { click: onEditProfile } }, avatarEl(a.profile.name, avatarColor(a.profile.id), a.profile.photo, 'avatar'), h('div', { class: 'chip-t' }, h('div', { class: 'chip-name', text: a.profile.name }), h('div', { class: 'chip-sub', text: st.games ? `${st.wins} vitórias em ${st.games} jogos` : 'Toque para editar o perfil' })));
   const items: HTMLElement[] = [
     btn('Jogar contra o computador', () => { sndClick(); showSetup(a); }, 'primary big'),
+    btn('Treino livre', () => { sndClick(); a.startOffline(loadOfflineSettings(), true); }, 'big'),
   ];
   if (a.online) items.push(...onlineButtons(a.online));
   items.push(h('div', { class: 'row tight' }, btn('Como jogar', () => showHelp(), 'ghost'), btn('Configurações', () => showSettings(a), 'ghost')));

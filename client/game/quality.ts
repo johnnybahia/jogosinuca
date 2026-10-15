@@ -8,17 +8,17 @@ export interface QualityProfile {
   /** quantas lâmpadas projetam sombra */
   shadowLights: number;
   bloom: boolean;
-  reflections: boolean;
   /** resolução das texturas de piso/parede */
   anisotropy: number;
-  lightCones: boolean;
+  /** texturas grandes (mármore 2048) */
+  hiTex: boolean;
 }
 
 export function qualityProfile(q: Quality): QualityProfile {
   const dpr = typeof window !== 'undefined' ? window.devicePixelRatio || 1 : 1;
-  if (q === 'high') return { pixelRatio: Math.min(dpr, 2), msaa: 4, shadowMap: 2048, shadowLights: 3, bloom: true, reflections: true, anisotropy: 8, lightCones: true };
-  if (q === 'medium') return { pixelRatio: Math.min(dpr, 1.5), msaa: 2, shadowMap: 1024, shadowLights: 1, bloom: true, reflections: true, anisotropy: 4, lightCones: true };
-  return { pixelRatio: 1, msaa: 0, shadowMap: 1024, shadowLights: 0, bloom: false, reflections: false, anisotropy: 1, lightCones: false };
+  if (q === 'high') return { pixelRatio: Math.min(dpr, 2), msaa: 4, shadowMap: 2048, shadowLights: 3, bloom: true, anisotropy: 8, hiTex: true };
+  if (q === 'medium') return { pixelRatio: Math.min(dpr, 1.5), msaa: 2, shadowMap: 1024, shadowLights: 1, bloom: true, anisotropy: 4, hiTex: false };
+  return { pixelRatio: 1, msaa: 0, shadowMap: 1024, shadowLights: 0, bloom: false, anisotropy: 1, hiTex: false };
 }
 
 export function detectQuality(): Quality {

@@ -53,6 +53,7 @@ export interface RoomData {
   breaker: number;
   /** a sessão (melhor de N) já foi decidida */
   seriesOver: boolean;
+  practice?: boolean;
 }
 
 export const cleanName = (n: unknown): string => String(n ?? '').replace(/[\u0000-\u001f<>]/g, '').trim().slice(0, NAME_MAX) || 'Jogador';
@@ -91,7 +92,7 @@ export class RoomCore {
   view(forId: string, now: number, connected: (id: string) => boolean, media: Record<string, { cam: boolean; mic: boolean }> = {}): RoomView {
     const d = this.d;
     const players: RoomPlayer[] = d.players.map((p) => ({ id: p.id, name: p.name, seat: p.seat, connected: p.bot || connected(p.id), isHost: p.id === d.hostId, bot: p.bot, botLevel: p.botLevel, left: p.left, wins: p.wins, title: p.title, cam: !!media[p.id]?.cam, mic: !!media[p.id]?.mic }));
-    return { t: 'state', code: d.code, phase: d.phase, hostId: d.hostId, mode: d.mode, turnSeconds: d.turnSeconds, bestOf: d.bestOf, isPublic: d.isPublic, you: forId, players, match: d.match, shotSeq: d.shotSeq, turnEndsAt: d.turnEndsAt, serverNow: now, gamesDone: d.gamesDone, result: d.result, last: d.last };
+    return { t: 'state', code: d.code, phase: d.phase, hostId: d.hostId, mode: d.mode, turnSeconds: d.turnSeconds, bestOf: d.bestOf, isPublic: d.isPublic, you: forId, players, match: d.match, shotSeq: d.shotSeq, turnEndsAt: d.turnEndsAt, serverNow: now, gamesDone: d.gamesDone, practice: d.practice, result: d.result, last: d.last };
   }
 
   // ---------- saguão

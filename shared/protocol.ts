@@ -64,6 +64,8 @@ export interface RoomView {
   serverNow: number;
   /** partidas já terminadas na sessão */
   gamesDone: number;
+  /** treino livre (só offline) */
+  practice?: boolean;
   result?: MatchResult;
   /** última tacada (para o painel de "o que aconteceu") */
   last?: ShotOutcome & { by: number };

@@ -31,8 +31,8 @@ const kb = (f) => (fs.statSync(f).size / 1024).toFixed(0) + ' KB';
 // ---------- bolas: o mapa do arquivo tem um número só, no centro; copia o disco para o lado oposto (duas faces numeradas)
 async function ball(n) {
   const name = n === 0 ? 'BallCue.jpeg' : n === 15 ? 'Ball 15.jpeg' : `Ball${n}.jpeg`;
-  const W = 1296;
-  const H = 648;
+  const W = 1024;
+  const H = 512;
   const base = await sharp(path.join(poolTex, name)).resize(W, H, { kernel: 'lanczos3' }).removeAlpha().raw().toBuffer({ resolveWithObject: true });
   const { data, info } = base;
   const ch = info.channels;
@@ -106,6 +106,7 @@ async function mirrorTile(input, { normal = false, quality = 88 } = {}) {
 }
 const mb = path.join(build, 'marble');
 await sharp(path.join(mb, 'Marble014_4K_Color.jpg')).resize(2048, 2048).jpeg({ quality: 82, mozjpeg: true }).toFile(path.join(pub, 'tex/marble_c.jpg'));
+await sharp(path.join(mb, 'Marble014_4K_Color.jpg')).resize(1024, 1024).jpeg({ quality: 80, mozjpeg: true }).toFile(path.join(pub, 'tex/marble_c_s.jpg'));
 await sharp(path.join(mb, 'Marble014_4K_NormalGL.jpg')).resize(1024, 1024).jpeg({ quality: 86, mozjpeg: true }).toFile(path.join(pub, 'tex/marble_n.jpg'));
 await sharp(path.join(mb, 'Marble014_4K_Roughness.jpg')).resize(1024, 1024).greyscale().jpeg({ quality: 86, mozjpeg: true }).toFile(path.join(pub, 'tex/marble_r.jpg'));
 console.log('texturas ok');

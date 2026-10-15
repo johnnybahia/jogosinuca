@@ -30,6 +30,9 @@ export interface Backend {
   rtc(to: string, data: unknown): void;
   emote(n: number): void;
   leave(): void;
+  /** só treino */
+  rerack?(): void;
+  readonly isPractice?: boolean;
 }
 
 export const noopEvents: BackendEvents = {
