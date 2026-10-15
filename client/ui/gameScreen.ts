@@ -38,6 +38,7 @@ export class GameScreen {
   private photos: Record<string, string> = {};
   private phase: Phase = 'wait';
   private animating = false;
+  private woodGame = 0;
   private spinKeep = { a: 0, b: 0 };
   private aim: AimState = { angle: 0, a: 0, b: 0, pull: 0.05 };
   private placed: { x: number; y: number } | null = null;
@@ -101,6 +102,7 @@ export class GameScreen {
     window.addEventListener('resize', this.onResize);
     this.view.onFrame = (dt) => this.frame(dt);
     this.view.setFelt(loadPrefs().felt);
+    this.applyWood();
     this.hud.setButtons({ top: false, guide: loadPrefs().guide, muted: isMuted() });
 
     const be = this.backend;
@@ -242,6 +244,10 @@ export class GameScreen {
       return;
     }
     this.seenResult = false;
+    if (v.gamesDone !== this.woodGame) {
+      this.woodGame = v.gamesDone;
+      this.applyWood();
+    }
     this.markMine(m);
     this.enterTurn();
   }
@@ -474,6 +480,12 @@ export class GameScreen {
     this.hud.setButtons({ top: this.top, guide: loadPrefs().guide, muted: isMuted() });
     sndClick();
   }
+  /** Madeira da mesa: a escolhida, ou sorteada a cada partida. */
+  private applyWood(): void {
+    const w = loadPrefs().wood;
+    this.view.setWood(w === 'aleatoria' ? (Math.random() < 0.5 ? 'classica' : 'mogno') : w);
+  }
+
   private toggleZoom(): void {
     const c = this.view.cam;
     const close = c.userDist > 0.5;
@@ -729,6 +741,10 @@ export class GameScreen {
       h('div', { class: 'setting' }, h('span', { text: 'Pano da mesa' }), segmented(FELTS.map((f) => ({ value: f.id, label: f.name.split(' ')[0]! })), p.felt, (id) => {
         savePrefs({ ...loadPrefs(), felt: id });
         this.view.setFelt(id);
+      })),
+      h('div', { class: 'setting' }, h('span', { text: 'Madeira da mesa' }), segmented([{ value: 'aleatoria', label: 'Aleatória' }, { value: 'classica', label: 'Clássica' }, { value: 'mogno', label: 'Mogno' }], p.wood, (id) => {
+        savePrefs({ ...loadPrefs(), wood: id });
+        this.applyWood();
       })),
       online ? h('div', { class: 'row' }, btn(this.rtc?.camOn ? '📷 Câmera ligada' : '🚫 Câmera desligada', () => { void this.toggleMedia('cam').then(() => this.overlay?.close()); }), btn(this.rtc?.micOn ? '🎤 Microfone ligado' : '🔇 Microfone desligado', () => { void this.toggleMedia('mic').then(() => this.overlay?.close()); })) : null,
       this.backend.isPractice ? btn('Reorganizar o triângulo', () => { this.overlay?.close(); this.backend.rerack?.(); }) : null,

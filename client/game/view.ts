@@ -161,6 +161,10 @@ export class PoolView {
     return this.quality;
   }
 
+  setWood(id: string): void {
+    this.table.setWood(id);
+  }
+
   setFelt(id: string): void {
     this.table.setFelt(FELTS.find((f) => f.id === id) ?? FELTS[0]!);
   }

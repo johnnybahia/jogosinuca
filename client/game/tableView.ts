@@ -26,6 +26,7 @@ export interface TableParts {
   bulbs: THREE.Mesh[];
   floor: THREE.Mesh;
   setFelt(theme: FeltTheme): void;
+  setWood(id: string): void;
   setProfile(p: QualityProfile): void;
   cones: THREE.Mesh[];
   /** poeira flutuando na luz (só nas qualidades média/alta) */
@@ -68,13 +69,15 @@ function feltGeometry(): THREE.BufferGeometry {
 
 export async function buildTable(assets: Assets, qp: QualityProfile, renderer: THREE.WebGLRenderer): Promise<TableParts> {
   assets.maxAniso = Math.min(qp.anisotropy, renderer.capabilities.getMaxAnisotropy());
-  const [tableGltf, lampGltf, feltTex, feltN, woodTex, woodN, marC, marN, marR] = await Promise.all([
+  const [tableGltf, lampGltf, feltTex, feltN, woodTex, woodN, woodMc, woodMn, marC, marN, marR] = await Promise.all([
     assets.gltf('models/table.glb'),
     assets.gltf('models/lamp.glb'),
     assets.texture('tex/felt.jpg', { repeat: true }),
     assets.texture('tex/felt_n.jpg', { repeat: true, srgb: false }),
     assets.texture('tex/wood.jpg', { repeat: true }),
     assets.texture('tex/wood_n.jpg', { repeat: true, srgb: false }),
+    assets.texture('tex/wood_m.jpg', { repeat: true }),
+    assets.texture('tex/wood_m_n.jpg', { repeat: true, srgb: false }),
     assets.texture(qp.hiTex ? 'tex/marble_c.jpg' : 'tex/marble_c_s.jpg', { repeat: true }),
     assets.texture('tex/marble_n.jpg', { repeat: true, srgb: false }),
     assets.texture('tex/marble_r.jpg', { repeat: true, srgb: false }),
@@ -312,10 +315,20 @@ export async function buildTable(assets: Assets, qp: QualityProfile, renderer: T
     feltMat.sheenColor.copy(sh);
     clothMat.sheenColor.copy(sh);
   };
+  woodMc.repeat.set(0.5, 0.5);
+  woodMn.repeat.set(0.5, 0.5);
+  const setWood = (id: string): void => {
+    const m = id === 'mogno';
+    woodMat.map = m ? woodMc : woodTex;
+    woodMat.normalMap = m ? woodMn : woodN;
+    woodMat.color.setHex(m ? 0xe2d2c8 : 0x9b8878);
+    woodMat.roughness = m ? 0.36 : 0.42;
+    woodMat.needsUpdate = true;
+  };
   setFelt(FELTS[0]!);
   setProfile(qp);
 
-  return { group: outer, felt, cushions, frame, lampGroup, spots, bulbs, floor, setFelt, setProfile, cones, dust, update };
+  return { group: outer, felt, cushions, frame, lampGroup, spots, bulbs, floor, setFelt, setWood, setProfile, cones, dust, update };
 }
 
 /** Papel de parede escuro com lambri de madeira na parte de baixo (feito em canvas, sem arquivo). */
