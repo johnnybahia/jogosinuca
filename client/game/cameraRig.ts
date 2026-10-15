@@ -26,6 +26,14 @@ export class CameraRig {
   userDist = 1.05;
   /** zoom da vista de cima (1 = mesa inteira) */
   topZoom = 1;
+  /** vista da mesa: câmera alta e fixa, mesa toda na tela, a mira continua funcionando */
+  overview = false;
+  /** o jogador mexeu no zoom nesta jogada: o enquadramento automático não mexe na distância */
+  manualZoom = false;
+  /** pontos (plano da física) que precisam caber na tela: branca, bola alvo, caçapa */
+  frame: { x: number; y: number }[] | null = null;
+  private fit = new THREE.PerspectiveCamera(42, 1, 0.03, 40);
+  private fitV = new THREE.Vector3();
   aspect = 1;
   private shake = 0;
   /** segundos de retorno suave (depois da tacada) */
@@ -51,6 +59,35 @@ export class CameraRig {
     return Math.max(needV, needH) * 1.0;
   }
 
+  /** Menor distância (a partir de `from`) em que todos os pontos aparecem na tela com margem. */
+  private fitDist(cx: number, cy: number, yaw: number, pitch: number, fov: number, from: number, max: number, pts: { x: number; y: number }[]): number {
+    const f = this.fit;
+    f.fov = fov;
+    f.aspect = this.aspect;
+    f.updateProjectionMatrix();
+    const ty = FELT_Y + BALL_R * 1.4;
+    const cp = Math.cos(pitch);
+    const sp = Math.sin(pitch);
+    let d = from;
+    for (; d < max; d *= 1.07) {
+      f.position.set(cx + Math.cos(yaw) * cp * d, ty + sp * d, -cy + Math.sin(yaw) * cp * d);
+      f.up.set(0, 1, 0);
+      f.lookAt(cx, ty, -cy);
+      f.updateMatrixWorld(true);
+      let ok = true;
+      for (const p of pts) {
+        this.fitV.set(p.x, FELT_Y + BALL_R, -p.y).project(f);
+        // margens maiores embaixo (taco e controles) e nos lados (botão de força e efeito)
+        if (this.fitV.z > 1 || Math.abs(this.fitV.x) > 0.8 || this.fitV.y > 0.78 || this.fitV.y < -0.55) {
+          ok = false;
+          break;
+        }
+      }
+      if (ok) return d;
+    }
+    return max;
+  }
+
   update(dt: number, follow?: { x: number; y: number; high?: boolean; yaw?: number }): void {
     this.t += dt;
     if (this.override) {
@@ -73,6 +110,28 @@ export class CameraRig {
       // aspecto vertical (celular): abre o campo de visão para a mesa caber na largura
       fovT = 42 + narrow * 40;
       gDist *= 1 + narrow * 0.25;
+      if (this.overview) {
+        gx = 0;
+        gy = 0;
+        gYaw = Math.PI / 2;
+        gPitch = 0.95;
+        const corners = [-1, 1].flatMap((sx) => [-1, 1].map((sy) => ({ x: sx * (HL + 0.12), y: sy * (HW + 0.12) })));
+        gDist = this.fitDist(0, 0, gYaw, gPitch, fovT, 1.2, 4.5, corners);
+      } else if (this.frame && this.frame.length > 1 && this.userDist > 0.6 && !this.manualZoom) {
+        // enquadra branca, bola alvo e caçapa; o ponto de mira anda um pouco em direção a eles
+        const c0 = this.frame[0]!;
+        let mx = 0;
+        let my = 0;
+        for (const q of this.frame.slice(1)) {
+          mx += q.x;
+          my += q.y;
+        }
+        mx /= this.frame.length - 1;
+        my /= this.frame.length - 1;
+        gx = c0.x + (mx - c0.x) * 0.3;
+        gy = c0.y + (my - c0.y) * 0.3;
+        gDist = Math.max(gDist, this.fitDist(gx, gy, gYaw, gPitch, fovT, gDist, 3.2, this.frame));
+      }
     } else if (this.mode === 'follow') {
       const f = follow ?? { x: this.tx, y: this.ty };
       gx = f.x;
@@ -81,6 +140,12 @@ export class CameraRig {
       gPitch = Math.max(this.userPitch, f.high ? 0.95 : 0.62);
       gDist = this.userDist * (f.high ? 1.0 : 1.55);
       fovT = 42 + narrow * 40;
+      // depois da tacada: branca e bola atingida juntas na tela
+      if (this.frame && this.frame.length > 1 && !f.high) {
+        gx = this.frame.reduce((a, q) => a + q.x, 0) / this.frame.length;
+        gy = this.frame.reduce((a, q) => a + q.y, 0) / this.frame.length;
+      }
+      if (this.frame && this.frame.length > 1 && !f.high) gDist = Math.max(gDist, this.fitDist(gx, gy, gYaw, gPitch, fovT, gDist, 3.2, this.frame));
     } else if (this.mode === 'top') {
       gx = 0;
       gy = 0;

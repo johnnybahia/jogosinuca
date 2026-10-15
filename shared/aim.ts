@@ -1,6 +1,6 @@
 /** Geometria da mira: bola fantasma, desvio da branca e da bola alvo, primeira batida na tabela. Só geometria (sem giro). */
 import type { BallPos } from './physics';
-import { BALL_D, BALL_R, HL, HW } from './table';
+import { BALL_D, BALL_R, HL, HW, POCKETS } from './table';
 
 export interface AimInfo {
   /** onde a branca estará no instante da batida */
@@ -94,3 +94,38 @@ export function aimTrace(balls: BallPos[], cx: number, cy: number, dx: number, d
   out.rdy = rdy;
   return out;
 }
+
+export interface PocketAim {
+  /** índice em POCKETS (-1 = nenhuma caçapa razoável na direção da bola alvo) */
+  index: number;
+  /** ponto da boca da caçapa (plano da física) */
+  x: number;
+  y: number;
+  /** a reta da bola alvo passa pela boca (com folga de bola) */
+  enters: boolean;
+}
+
+/** Caçapa mais alinhada com a saída da bola alvo e se a reta entra na boca. */
+export function pocketAim(ox: number, oy: number, dx: number, dy: number): PocketAim {
+  let best: PocketAim = { index: -1, x: ox, y: oy, enters: false };
+  let bestAng = 0.6;
+  POCKETS.forEach((p, i) => {
+    const mx = (p.ax + p.bx) / 2;
+    const my = (p.ay + p.by) / 2;
+    const vx = mx - ox;
+    const vy = my - oy;
+    const along = vx * dx + vy * dy;
+    if (along <= 0.02) return;
+    const perp = Math.abs(vx * dy - vy * dx);
+    const ang = Math.atan2(perp, along);
+    if (ang < bestAng) {
+      bestAng = ang;
+      const half = Math.hypot(p.bx - p.ax, p.by - p.ay) / 2;
+      best = { index: i, x: mx, y: my, enters: perp < half - BALL_R * 0.6 };
+    }
+  });
+  return best;
+}
+
+/** Ângulo de corte em graus (0 = bola reta). */
+export const cutAngle = (info: AimInfo, dx: number, dy: number): number => (info.hit < 0 ? 0 : (Math.acos(Math.min(1, Math.max(-1, dx * info.objDx + dy * info.objDy))) * 180) / Math.PI);

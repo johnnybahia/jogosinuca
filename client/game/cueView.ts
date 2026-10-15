@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { BALL_R, FELT_Y } from '../../shared/table';
-import type { AimInfo } from '../../shared/aim';
+import type { AimInfo, PocketAim } from '../../shared/aim';
 import type { Assets } from './assets';
 
 const SURFACE_Y = FELT_Y + BALL_R;
@@ -76,6 +76,19 @@ export class CueView {
   setVisible(v: boolean): void {
     this.group.visible = v;
   }
+
+  /** Taco translúcido enquanto se mira: não esconde a bola nem a linha de mira. */
+  setFade(on: boolean): void {
+    this.group.traverse((o) => {
+      const m = o as THREE.Mesh;
+      if (!m.isMesh) return;
+      const mat = m.material as THREE.MeshStandardMaterial;
+      mat.transparent = on;
+      mat.opacity = on ? 0.55 : 1;
+      mat.depthWrite = !on;
+      mat.needsUpdate = true;
+    });
+  }
 }
 
 function dashTexture(): THREE.CanvasTexture {
@@ -125,6 +138,8 @@ export class AimView {
   group = new THREE.Group();
   private main: Ribbon;
   private obj: Ribbon;
+  private pocket: Ribbon;
+  private pocketRing: THREE.Mesh;
   private cue: Ribbon;
   private ring: THREE.Mesh;
   private ghost: THREE.Mesh;
@@ -135,6 +150,10 @@ export class AimView {
     this.main = new Ribbon(0xffffff, 0.85, 0.0034, false, dash);
     this.obj = new Ribbon(0xffe27a, 0.9, 0.0034, true, dash);
     this.cue = new Ribbon(0xcfe8ff, 0.6, 0.0028, true, dash);
+    this.pocket = new Ribbon(0x5df08a, 0.85, 0.0034, true, dash);
+    this.pocketRing = new THREE.Mesh(new THREE.RingGeometry(BALL_R * 0.55, BALL_R * 0.75, 40).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ color: 0x5df08a, transparent: true, opacity: 0.9, depthWrite: false }));
+    this.pocketRing.renderOrder = 4;
+    this.pocketRing.visible = false;
     const ringGeo = new THREE.RingGeometry(BALL_R * 0.93, BALL_R, 56).rotateX(-Math.PI / 2);
     this.ring = new THREE.Mesh(ringGeo, new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.9, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -4 }));
     this.ring.renderOrder = 4;
@@ -142,12 +161,12 @@ export class AimView {
     this.ghost.renderOrder = 3;
     this.objRing = new THREE.Mesh(new THREE.RingGeometry(BALL_R * 1.08, BALL_R * 1.2, 48).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ color: 0xffe27a, transparent: true, opacity: 0.8, depthWrite: false }));
     this.objRing.renderOrder = 4;
-    this.group.add(this.main.mesh, this.obj.mesh, this.cue.mesh, this.ring, this.ghost, this.objRing);
+    this.group.add(this.main.mesh, this.obj.mesh, this.cue.mesh, this.pocket.mesh, this.pocketRing, this.ring, this.ghost, this.objRing);
     this.group.visible = false;
   }
 
   /** `from` é a posição da branca (plano da física). */
-  update(from: { x: number; y: number }, dx: number, dy: number, info: AimInfo, objPos: { x: number; y: number } | null): void {
+  update(from: { x: number; y: number }, dx: number, dy: number, info: AimInfo, objPos: { x: number; y: number } | null, pocket: PocketAim | null = null, full = true): void {
     this.group.visible = true;
     const sx = from.x + dx * BALL_R * 1.05;
     const sy = from.y + dy * BALL_R * 1.05;
@@ -159,17 +178,34 @@ export class AimView {
       this.ghost.position.set(info.ghostX, FELT_Y + 0.0013, -info.ghostY);
       const op = objPos!;
       const len = 0.3;
-      this.obj.set(op.x, op.y, op.x + info.objDx * len, op.y + info.objDy * len);
+      if (full) this.obj.set(op.x, op.y, op.x + info.objDx * len, op.y + info.objDy * len);
+      else this.obj.mesh.visible = false;
+      if (full && pocket && pocket.index >= 0) {
+        const col = pocket.enters ? 0x5df08a : 0xffa34d;
+        ((this.pocket.mesh.material as THREE.MeshBasicMaterial)).color.setHex(col);
+        (this.pocketRing.material as THREE.MeshBasicMaterial).color.setHex(col);
+        this.obj.mesh.visible = false;
+        this.pocket.set(op.x, op.y, pocket.x, pocket.y);
+        this.pocketRing.visible = true;
+        this.pocketRing.position.set(pocket.x, FELT_Y + 0.0013, -pocket.y);
+      } else {
+        this.pocket.mesh.visible = false;
+        this.pocketRing.visible = false;
+      }
       this.objRing.visible = true;
       this.objRing.position.set(op.x, FELT_Y + 0.0013, -op.y);
-      this.cue.set(info.ghostX, info.ghostY, info.ghostX + info.cueDx * 0.2, info.ghostY + info.cueDy * 0.2);
+      if (full) this.cue.set(info.ghostX, info.ghostY, info.ghostX + info.cueDx * 0.2, info.ghostY + info.cueDy * 0.2);
+      else this.cue.mesh.visible = false;
     } else {
       this.ring.visible = true;
       this.ghost.visible = false;
       this.ring.position.set(info.ghostX, FELT_Y + 0.0014, -info.ghostY);
       this.objRing.visible = false;
       this.obj.mesh.visible = false;
-      this.cue.set(info.ghostX, info.ghostY, info.ghostX + info.rdx * 0.35, info.ghostY + info.rdy * 0.35);
+      this.pocket.mesh.visible = false;
+      this.pocketRing.visible = false;
+      if (full) this.cue.set(info.ghostX, info.ghostY, info.ghostX + info.rdx * 0.35, info.ghostY + info.rdy * 0.35);
+      else this.cue.mesh.visible = false;
     }
   }
 

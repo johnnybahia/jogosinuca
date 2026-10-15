@@ -75,6 +75,7 @@ export class GameScreen {
       onSpin: (a, b) => this.onSpin(a, b),
       onView: () => this.toggleView(),
       onZoom: () => this.toggleZoom(),
+      onTable: () => this.toggleTable(),
       onGuide: () => this.toggleGuide(),
       onSound: () => this.toggleSound(),
       onMenu: () => this.openMenu(),
@@ -102,6 +103,8 @@ export class GameScreen {
     window.addEventListener('resize', this.onResize);
     this.view.onFrame = (dt) => this.frame(dt);
     this.view.setFelt(loadPrefs().felt);
+    this.view.setGuideFull(loadPrefs().guideFull);
+    this.view.onAimInfo = (t) => this.hud.setAimInfo(this.phase === 'aim' ? t : '');
     this.applyWood();
     this.hud.setButtons({ top: false, guide: loadPrefs().guide, muted: isMuted() });
 
@@ -318,6 +321,7 @@ export class GameScreen {
   private beginAim(announce: boolean): void {
     const m = this.match!;
     this.phase = 'aim';
+    this.view.cam.manualZoom = false;
     this.hud.setPlacing(false);
     this.hud.setEnabled(true);
     this.hud.setPower(0);
@@ -439,6 +443,7 @@ export class GameScreen {
     const pos = this.view.getPositions().find((b) => b.id === 0) ?? c;
     this.phase = 'shooting';
     this.pendingShot = true;
+    this.hud.setAimInfo('');
     this.hud.setEnabled(false);
     this.hud.setPowerHint(null);
     this.hud.setHint('');
@@ -490,6 +495,14 @@ export class GameScreen {
     this.view.setCue(pr.cue === 'aleatorio' ? (Math.random() < 0.5 ? 'pacote' : 'classico') : pr.cue);
   }
 
+  private overview = false;
+  private toggleTable(): void {
+    this.overview = !this.overview;
+    this.view.setOverview(this.overview);
+    this.hud.setTableOn(this.overview);
+    sndClick();
+  }
+
   private toggleZoom(): void {
     const c = this.view.cam;
     const close = c.userDist > 0.5;
@@ -518,6 +531,7 @@ export class GameScreen {
     if (k === 'v' || k === 'V') return this.toggleView();
     if (k === 'g' || k === 'G') return this.toggleGuide();
     if (k === 'z' || k === 'Z') return this.toggleZoom();
+    if (k === 't' || k === 'T') return this.toggleTable();
     if (k === 'h' || k === 'H') return this.hint();
     if (k === 'm' || k === 'M') return this.toggleSound();
     if (k === ' ' && this.phase === 'aim') {
@@ -745,6 +759,10 @@ export class GameScreen {
       h('div', { class: 'setting' }, h('span', { text: 'Pano da mesa' }), segmented(FELTS.map((f) => ({ value: f.id, label: f.name.split(' ')[0]! })), p.felt, (id) => {
         savePrefs({ ...loadPrefs(), felt: id });
         this.view.setFelt(id);
+      })),
+      h('div', { class: 'setting' }, h('span', { text: 'Linha de mira' }), segmented([{ value: 'full', label: 'Completa' }, { value: 'first', label: 'Só contato' }], p.guideFull ? 'full' : 'first', (id) => {
+        savePrefs({ ...loadPrefs(), guideFull: id === 'full' });
+        this.view.setGuideFull(id === 'full');
       })),
       h('div', { class: 'setting' }, h('span', { text: 'Madeira da mesa' }), segmented([{ value: 'aleatoria', label: 'Aleatória' }, { value: 'classica', label: 'Clássica' }, { value: 'mogno', label: 'Mogno' }, { value: 'pacote', label: 'Pacote' }], p.wood, (id) => {
         savePrefs({ ...loadPrefs(), wood: id });

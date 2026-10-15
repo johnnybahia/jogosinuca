@@ -173,6 +173,8 @@ input { font: inherit; }
 .banner-s { color: #d9d3c8; margin-top: 4px; font-size: 0.95rem; }
 .hint { position: absolute; left: 0; right: 0; bottom: calc(var(--sab) + 64px); padding: 0 120px; text-align: center; font-size: 0.85rem; color: #d9d3c8; text-shadow: 0 2px 8px #000; opacity: 0; transition: opacity 0.3s; }
 .hint.show { opacity: 0.9; }
+.aim-info { position: absolute; left: 50%; top: calc(var(--sat) + 78px); transform: translateX(-50%); padding: 4px 12px; border-radius: 999px; background: rgba(10, 13, 18, 0.7); border: 1px solid var(--line); font-size: 0.78rem; font-weight: 600; color: #f2e9d0; opacity: 0; transition: opacity 0.2s; pointer-events: none; white-space: nowrap; }
+.aim-info.show { opacity: 0.95; }
 
 /* força (direita): puxe a alça para baixo e solte */
 .power { position: absolute; right: calc(var(--sar) + 14px); top: 50%; transform: translateY(-50%); width: 58px; height: min(58vh, 400px); pointer-events: none; opacity: 0.55; touch-action: none; }

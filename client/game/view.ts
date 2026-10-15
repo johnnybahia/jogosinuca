@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { aimTrace } from '../../shared/aim';
+import { aimTrace, cutAngle, pocketAim } from '../../shared/aim';
 import { BALL_R, HL, HW, POCKETS } from '../../shared/table';
 import { Sim, strike, type BallPos, type ShotParams, type SimEvent } from '../../shared/physics';
 import { Assets } from './assets';
@@ -231,7 +231,20 @@ export class PoolView {
     this.refreshAim();
   }
 
+  guideFull = true;
+  onAimInfo: ((t: string) => void) | null = null;
+
+  setGuideFull(on: boolean): void {
+    this.guideFull = on;
+    this.refreshAim();
+  }
+
+  setOverview(on: boolean): void {
+    this.cam.overview = on;
+  }
+
   private cueEl = CUE_ELEVATION;
+  private slide: { fx: number; fy: number; tx: number; ty: number; t: number } | null = null;
 
   /** Elevação do taco: sobe o suficiente para a parte de trás passar por cima de bolas atrás da branca e das tabelas. */
   private cueElev(pos: BallPos[], cx: number, cy: number, ang: number, b: number): number {
@@ -272,14 +285,26 @@ export class PoolView {
       this.cue.place(cue.x, cue.y, angle, a, b, pull, this.cueElev(this.pos, cue.x, cue.y, angle, b));
       this.cue.setVisible(true);
     }
+    this.cue.setFade(this.cueOn);
     if (this.aimOn) {
       const dx = Math.cos(angle);
       const dy = Math.sin(angle);
       const info = aimTrace(this.pos, cue.x, cue.y, dx, dy);
       const obj = info.hit >= 0 ? this.pos.find((p) => p.id === info.hit)! : null;
-      this.aimView.update(cue, dx, dy, info, obj);
+      const pk = obj ? pocketAim(obj.x, obj.y, info.objDx, info.objDy) : null;
+      this.aimView.update(cue, dx, dy, info, obj, pk, this.guideFull);
+      // enquadramento: branca + ponto do contato + bola alvo + caçapa provável
+      const pts = [{ x: cue.x, y: cue.y }];
+      if (obj) {
+        pts.push({ x: info.ghostX, y: info.ghostY }, { x: obj.x, y: obj.y });
+        if (pk && pk.index >= 0) pts.push({ x: pk.x, y: pk.y });
+      } else pts.push({ x: info.ghostX, y: info.ghostY });
+      this.cam.frame = pts;
+      this.onAimInfo?.(obj ? `Corte ${Math.round(cutAngle(info, dx, dy))}°${pk && pk.index >= 0 ? (pk.enters ? ' · caçapa ✓' : ' · caçapa fora') : ''}` : '');
     } else {
       this.aimView.hide();
+      this.cam.frame = null;
+      this.onAimInfo?.('');
     }
   }
 
@@ -289,7 +314,12 @@ export class PoolView {
    */
   playShot(start: BallPos[], shot: ShotParams, h: PlaybackHandlers = {}): void {
     this.handlers = h;
+    const old = this.pos.find((p) => p.id === 0);
+    const to = start.find((p) => p.id === 0);
+    this.slide = null;
     this.setBalls(start);
+    // bola na mão do adversário: a branca desliza até onde ele a pôs, em vez de teletransportar
+    if (old && to && old.on && to.on && Math.hypot(old.x - to.x, old.y - to.y) > 0.004) this.slide = { fx: old.x, fy: old.y, tx: to.x, ty: to.y, t: 0 };
     this.strikeStart = start;
     this.strikeShot = shot;
     this.strikeT = 0;
@@ -299,6 +329,7 @@ export class PoolView {
     this.cam.tx = cue.x;
     this.cam.ty = cue.y;
     this.aimView.hide();
+    this.cue.setFade(false);
     this.cue.setVisible(true);
     this.followCue = true;
     this.cam.mode = 'aim';
@@ -443,7 +474,22 @@ export class PoolView {
       }
     }
     // animação do taco
-    if (this.strikeT >= 0 && this.strikeShot) {
+    if (this.slide) {
+      const sl = this.slide;
+      sl.t += dt;
+      const k = Math.min(1, sl.t / 0.55);
+      const e = k * k * (3 - 2 * k);
+      const x = sl.fx + (sl.tx - sl.fx) * e;
+      const y = sl.fy + (sl.ty - sl.fy) * e;
+      this.balls.setPositions(this.pos.map((p) => (p.id === 0 ? { ...p, x, y } : p)));
+      this.cam.tx = x;
+      this.cam.ty = y;
+      this.cue.setVisible(false);
+      if (k >= 1) {
+        this.slide = null;
+        this.cue.setVisible(true);
+      }
+    } else if (this.strikeT >= 0 && this.strikeShot) {
       this.strikeT += dt;
       const dur = 0.16;
       const k = Math.min(1, this.strikeT / dur);
@@ -475,6 +521,11 @@ export class PoolView {
     if (!this.lampBottom) this.lampBottom = new THREE.Box3().setFromObject(this.table.lampGroup).min.y;
     // a luminária fica no caminho quando a câmera sobe: some enquanto a câmera estiver perto da altura dela
     this.table.lampGroup.visible = this.lampOn && (this.cam.mode === 'menu' || this.cam.camera.position.y < this.lampBottom - 0.15);
+    if (this.sim && this.followCue) {
+      const c0 = this.sim.balls[0];
+      const fh = this.sim.firstHit >= 0 ? this.sim.balls[this.sim.firstHit] : null;
+      this.cam.frame = c0 && c0.on && fh && fh.on && Math.hypot(c0.x - fh.x, c0.y - fh.y) < 1.4 ? [{ x: c0.x, y: c0.y }, { x: fh.x, y: fh.y }] : null;
+    }
     this.cam.update(dt, this.sim && this.followCue ? this.followTarget() : undefined);
     this.onFrame?.(dt);
     if (this.post.enabled) this.post.render(dt, this.time);

@@ -138,7 +138,10 @@ export class AimInput {
   zoom(f: number): void {
     const c = this.view.cam;
     if (c.mode === 'top') c.topZoom = clamp(c.topZoom * f, 0.45, 1.4);
-    else c.userDist = clamp(c.userDist * f, 0.22, 3);
+    else {
+      c.userDist = clamp(c.userDist * f, 0.22, 3);
+      c.manualZoom = true;
+    }
   }
 
   tilt(d: number): void {

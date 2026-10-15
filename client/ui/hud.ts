@@ -26,6 +26,7 @@ export interface HudHandlers {
   onSpin(a: number, b: number): void;
   onView(): void;
   onZoom(): void;
+  onTable(): void;
   onGuide(): void;
   onSound(): void;
   onMenu(): void;
@@ -61,6 +62,8 @@ export class Hud {
   private btnGuide!: HTMLButtonElement;
   private btnView!: HTMLButtonElement;
   private btnZoom!: HTMLButtonElement;
+  private btnTable!: HTMLButtonElement;
+  private aimInfo = h('div', { class: 'aim-info' });
   private btnCam!: HTMLButtonElement;
   private btnMic!: HTMLButtonElement;
   private btnEmote!: HTMLButtonElement;
@@ -87,6 +90,7 @@ export class Hud {
     const mk = (label: string, title: string, fn: () => void): HTMLButtonElement => h('button', { class: 'ibtn', text: label, attrs: { type: 'button', title, 'aria-label': title }, on: { click: fn } });
     this.btnView = mk('⌖', 'Trocar visão (V)', () => hd.onView());
     this.btnZoom = mk('🔍', 'Zoom de perto (Z)', () => hd.onZoom());
+    this.btnTable = mk('▦', 'Vista da mesa (T)', () => hd.onTable());
     this.btnGuide = mk('◎', 'Linha de mira (G)', () => hd.onGuide());
     this.btnSound = mk('♪', 'Som (M)', () => hd.onSound());
     const btnMenu = mk('☰', 'Menu (Esc)', () => hd.onMenu());
@@ -97,7 +101,7 @@ export class Hud {
     this.btnHint.hidden = true;
     for (const b of [this.btnCam, this.btnMic, this.btnEmote]) b.hidden = true;
     EMOTES.forEach((e, i) => this.emotes.append(h('button', { class: 'emote-btn', text: e, attrs: { type: 'button' }, on: { click: () => { this.emotes.classList.remove('open'); hd.onEmote?.(i); } } })));
-    const tools = h('div', { class: 'tools' }, this.btnView, this.btnZoom, this.btnGuide, this.btnSound, this.btnHint, this.btnCam, this.btnMic, this.btnEmote, btnMenu);
+    const tools = h('div', { class: 'tools' }, this.btnView, this.btnTable, this.btnZoom, this.btnGuide, this.btnSound, this.btnHint, this.btnCam, this.btnMic, this.btnEmote, btnMenu);
 
     // força: puxe a alça para baixo e solte para tacar
     this.power.append(h('div', { class: 'power-track' }, this.powerFill), this.powerHint, this.powerKnob, this.powerLabel);
@@ -114,7 +118,7 @@ export class Hud {
     this.placeBar.append(h('span', { text: 'Arraste a bola branca para posicionar' }), h('button', { class: 'btn primary small', text: 'Confirmar', attrs: { type: 'button' }, on: { click: () => hd.onConfirmPlace() } }));
     this.placeBar.hidden = true;
 
-    this.root.append(top, tools, this.emotes, this.holder, this.banner, this.hint, this.power, h('div', { class: 'spinwrap' }, this.spin, h('div', { class: 'spin-label', text: 'EFEITO' })), this.fine, this.placeBar);
+    this.root.append(top, tools, this.emotes, this.holder, this.banner, this.hint, this.aimInfo, this.power, h('div', { class: 'spinwrap' }, this.spin, h('div', { class: 'spin-label', text: 'EFEITO' })), this.fine, this.placeBar);
     this.setEnabled(false);
   }
 
@@ -251,6 +255,15 @@ export class Hud {
     this.enabled = on;
     this.root.classList.toggle('can-play', on);
     if (!on) this.setPower(0);
+  }
+
+  setTableOn(on: boolean): void {
+    this.btnTable.classList.toggle('on', on);
+  }
+
+  setAimInfo(t: string): void {
+    this.aimInfo.textContent = t;
+    this.aimInfo.classList.toggle('show', !!t);
   }
 
   setZoomOn(on: boolean): void {
