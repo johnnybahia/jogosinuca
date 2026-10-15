@@ -88,9 +88,9 @@ export class RoomCore {
     return this.d.match ? this.player(this.d.match.turn) : undefined;
   }
 
-  view(forId: string, now: number, connected: (id: string) => boolean): RoomView {
+  view(forId: string, now: number, connected: (id: string) => boolean, media: Record<string, { cam: boolean; mic: boolean }> = {}): RoomView {
     const d = this.d;
-    const players: RoomPlayer[] = d.players.map((p) => ({ id: p.id, name: p.name, seat: p.seat, connected: p.bot || connected(p.id), isHost: p.id === d.hostId, bot: p.bot, botLevel: p.botLevel, left: p.left, wins: p.wins, title: p.title }));
+    const players: RoomPlayer[] = d.players.map((p) => ({ id: p.id, name: p.name, seat: p.seat, connected: p.bot || connected(p.id), isHost: p.id === d.hostId, bot: p.bot, botLevel: p.botLevel, left: p.left, wins: p.wins, title: p.title, cam: !!media[p.id]?.cam, mic: !!media[p.id]?.mic }));
     return { t: 'state', code: d.code, phase: d.phase, hostId: d.hostId, mode: d.mode, turnSeconds: d.turnSeconds, bestOf: d.bestOf, isPublic: d.isPublic, you: forId, players, match: d.match, shotSeq: d.shotSeq, turnEndsAt: d.turnEndsAt, serverNow: now, gamesDone: d.gamesDone, result: d.result, last: d.last };
   }
 

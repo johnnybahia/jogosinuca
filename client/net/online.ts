@@ -62,6 +62,12 @@ export class OnlineBackend implements Backend {
         case 'photo':
           this.events.onPhoto(m.id, m.data);
           break;
+        case 'rtc':
+          this.events.onRtc(m.from, m.data);
+          break;
+        case 'emote':
+          this.events.onEmote(m.from, m.n);
+          break;
         case 'notice':
           this.events.onNotice(m.text);
           break;
@@ -111,6 +117,15 @@ export class OnlineBackend implements Backend {
   }
   kick(id: string): void {
     this.send({ t: 'kick', id });
+  }
+  media(cam: boolean, mic: boolean): void {
+    this.send({ t: 'media', cam, mic });
+  }
+  rtc(to: string, data: unknown): void {
+    this.send({ t: 'rtc', to, data });
+  }
+  emote(n: number): void {
+    this.send({ t: 'emote', n });
   }
   leave(): void {
     this.closedByUs = true;

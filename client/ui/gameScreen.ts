@@ -14,6 +14,8 @@ import { MODES, groupName, nearestFree, targets, type MatchState } from '../../s
 import { getPwa, applyUpdate, onPwa } from '../pwa';
 import { qualityOptions } from './settings';
 import { LobbyPanel } from './lobby';
+import { RtcMesh } from '../net/rtc';
+import { getIceServers } from '../api';
 
 export interface GameOpts {
   view: PoolView;
@@ -58,6 +60,8 @@ export class GameScreen {
   private connBanner: HTMLElement | null = null;
   private lobby: LobbyPanel | null = null;
   private pill: HTMLElement | null = null;
+  private rtc: RtcMesh | null = null;
+  private peerIds: string[] = [];
   private offPwa: (() => void) | null = null;
 
   constructor(private o: GameOpts) {
@@ -73,6 +77,12 @@ export class GameScreen {
       onMenu: () => this.openMenu(),
       onFine: (d) => this.rotate(d * 0.0016 * (this.view.cam.userDist / 1.05)),
       onConfirmPlace: () => this.confirmPlace(),
+      onCam: () => void this.toggleMedia('cam'),
+      onMic: () => void this.toggleMedia('mic'),
+      onEmote: (n) => {
+        this.backend.emote(n);
+        this.hud.showEmote(this.profile.id, n);
+      },
     });
     o.root.replaceChildren(this.hud.root);
     if (o.backend.mode === 'online') this.lobby = new LobbyPanel(o.backend, o.profile.id, () => this.confirmExit());
@@ -111,6 +121,8 @@ export class GameScreen {
           this.enterTurn();
         }
       },
+      onRtc: (from, data) => void this.rtc?.handle(from, data as never),
+      onEmote: (from, n) => this.hud.showEmote(from, n),
       onKicked: () => {
         toast('Você saiu da sala.');
         this.exit();
@@ -118,6 +130,10 @@ export class GameScreen {
       onConn: (s) => this.onConn(s),
     };
     this.offPwa = onPwa((st) => this.setUpdate(st.update));
+    if (o.backend.mode === 'online') {
+      this.hud.setOnline(true);
+      void this.initRtc();
+    }
     (window as unknown as { __game: GameScreen }).__game = this;
     be.connect();
   }
@@ -162,6 +178,12 @@ export class GameScreen {
     this.apply(v, false);
   }
 
+  private syncPeers(v: RoomView): void {
+    if (this.backend.mode !== 'online') return;
+    this.peerIds = v.players.filter((p) => !p.bot && !p.left).map((p) => p.id);
+    this.rtc?.setPeers(this.peerIds);
+  }
+
   private apply(v: RoomView, afterShot: boolean): void {
     const prevSeq = this.lastSeq;
     this.v = v;
@@ -181,6 +203,7 @@ export class GameScreen {
         this.view.setBalls(v.match?.balls ?? []);
       }
     }
+    this.syncPeers(v);
     this.hud.update(v, this.photos, this.profile.id);
     const m = v.match;
     if (!m) {
@@ -553,6 +576,34 @@ export class GameScreen {
     } else this.hud.setTimer(null, false);
   }
 
+  // ---------- vídeo e áudio ao vivo ----------
+  private async initRtc(): Promise<void> {
+    if (typeof RTCPeerConnection === 'undefined') return;
+    const ice = await getIceServers();
+    if (this.done) return;
+    this.rtc = new RtcMesh({
+      myId: this.profile.id,
+      iceServers: ice,
+      send: (to, data) => this.backend.rtc(to, data),
+      onStream: (id, stream) => this.hud.setStream(id, stream, false),
+    });
+    this.rtc.setPeers(this.peerIds);
+  }
+
+  private async toggleMedia(kind: 'cam' | 'mic'): Promise<void> {
+    if (!this.rtc) return toast('Vídeo e áudio só funcionam no jogo online.');
+    try {
+      if (kind === 'cam') await this.rtc.setCam(!this.rtc.camOn);
+      else await this.rtc.setMic(!this.rtc.micOn);
+    } catch {
+      toast(kind === 'cam' ? 'Não consegui usar a câmera. Verifique a permissão do navegador.' : 'Não consegui usar o microfone. Verifique a permissão do navegador.');
+      return;
+    }
+    this.hud.setStream(this.profile.id, this.rtc.camOn ? this.rtc.localVideo : null, true);
+    this.hud.setMedia(this.rtc.camOn, this.rtc.micOn);
+    this.backend.media(this.rtc.camOn, this.rtc.micOn);
+  }
+
   // ---------- atualização do jogo ----------
   private setUpdate(on: boolean): void {
     if (on && !this.pill && !this.done) {
@@ -592,6 +643,7 @@ export class GameScreen {
     const sensIn = h('input', { class: 'range', attrs: { type: 'range', min: '50', max: '200', value: String(Math.round(p.sens * 100)) } });
     sensIn.addEventListener('input', () => savePrefs({ ...loadPrefs(), sens: Number(sensIn.value) / 100 }));
     const upd = getPwa().update ? btn('Atualizar o jogo', () => void applyUpdate(), 'primary') : null;
+    const online = this.backend.mode === 'online';
     const box = h(
       'div',
       { class: 'panel menu-modal' },
@@ -606,6 +658,7 @@ export class GameScreen {
         savePrefs({ ...loadPrefs(), felt: id });
         this.view.setFelt(id);
       })),
+      online ? h('div', { class: 'row' }, btn(this.rtc?.camOn ? '📷 Câmera ligada' : '🚫 Câmera desligada', () => { void this.toggleMedia('cam').then(() => this.overlay?.close()); }), btn(this.rtc?.micOn ? '🎤 Microfone ligado' : '🔇 Microfone desligado', () => { void this.toggleMedia('mic').then(() => this.overlay?.close()); })) : null,
       upd,
       h('div', { class: 'row' }, btn('Continuar', () => this.overlay?.close(), 'primary'), btn('Sair da partida', () => this.confirmExit(), 'danger')),
     );
@@ -683,6 +736,7 @@ export class GameScreen {
     this.connBanner?.remove();
     this.lobby?.el.remove();
     this.pill?.remove();
+    this.rtc?.close();
     this.offPwa?.();
     this.backend.leave();
     this.o.root.replaceChildren();

@@ -1,7 +1,7 @@
 import { groupName, type Group, type MatchState, MODES, POINTS_TO_WIN, groupOf } from '../../shared/rules';
 import { avatarColor } from '../store';
 import { avatarEl, h } from './dom';
-import type { RoomPlayer, RoomView } from '../../shared/protocol';
+import { EMOTES, type RoomPlayer, type RoomView } from '../../shared/protocol';
 
 export const BALL_COLORS: Record<number, string> = {
   0: '#f8fafc',
@@ -30,7 +30,9 @@ export interface HudHandlers {
   onMenu(): void;
   onFine(delta: number): void;
   onConfirmPlace(): void;
-  onCue?(): void;
+  onCam?(): void;
+  onMic?(): void;
+  onEmote?(n: number): void;
 }
 
 /** Interface sobre o canvas: cartões dos jogadores, bandeja de bolas, força, efeito, mensagens. */
@@ -56,6 +58,13 @@ export class Hud {
   private btnSound!: HTMLButtonElement;
   private btnGuide!: HTMLButtonElement;
   private btnView!: HTMLButtonElement;
+  private btnCam!: HTMLButtonElement;
+  private btnMic!: HTMLButtonElement;
+  private btnEmote!: HTMLButtonElement;
+  private emotes = h('div', { class: 'emotes' });
+  private holder = h('div', { class: 'rtc-holder' });
+  private videos = new Map<string, HTMLVideoElement>();
+  private seatOf = new Map<string, number>();
   powerVal = 0;
   enabled = false;
 
@@ -75,7 +84,12 @@ export class Hud {
     this.btnGuide = mk('◎', 'Linha de mira (G)', () => hd.onGuide());
     this.btnSound = mk('♪', 'Som (M)', () => hd.onSound());
     const btnMenu = mk('☰', 'Menu (Esc)', () => hd.onMenu());
-    const tools = h('div', { class: 'tools' }, this.btnView, this.btnGuide, this.btnSound, btnMenu);
+    this.btnCam = mk('📷', 'Câmera', () => hd.onCam?.());
+    this.btnMic = mk('🎤', 'Microfone', () => hd.onMic?.());
+    this.btnEmote = mk('💬', 'Reações', () => this.emotes.classList.toggle('open'));
+    for (const b of [this.btnCam, this.btnMic, this.btnEmote]) b.hidden = true;
+    EMOTES.forEach((e, i) => this.emotes.append(h('button', { class: 'emote-btn', text: e, attrs: { type: 'button' }, on: { click: () => { this.emotes.classList.remove('open'); hd.onEmote?.(i); } } })));
+    const tools = h('div', { class: 'tools' }, this.btnView, this.btnGuide, this.btnSound, this.btnCam, this.btnMic, this.btnEmote, btnMenu);
 
     // força: puxe a alça para baixo e solte para tacar
     this.power.append(h('div', { class: 'power-track' }, this.powerFill), this.powerKnob, this.powerLabel);
@@ -92,7 +106,7 @@ export class Hud {
     this.placeBar.append(h('span', { text: 'Arraste a bola branca para posicionar' }), h('button', { class: 'btn primary small', text: 'Confirmar', attrs: { type: 'button' }, on: { click: () => hd.onConfirmPlace() } }));
     this.placeBar.hidden = true;
 
-    this.root.append(top, tools, this.banner, this.hint, this.power, h('div', { class: 'spinwrap' }, this.spin, h('div', { class: 'spin-label', text: 'EFEITO' })), this.fine, this.placeBar);
+    this.root.append(top, tools, this.emotes, this.holder, this.banner, this.hint, this.power, h('div', { class: 'spinwrap' }, this.spin, h('div', { class: 'spin-label', text: 'EFEITO' })), this.fine, this.placeBar);
     this.setEnabled(false);
   }
 
@@ -243,6 +257,45 @@ export class Hud {
     this.btnSound.textContent = s.muted ? '✕' : '♪';
   }
 
+  /** Liga os botões de vídeo/reações (só no jogo online). */
+  setOnline(on: boolean): void {
+    for (const b of [this.btnCam, this.btnMic, this.btnEmote]) b.hidden = !on;
+  }
+
+  setMedia(cam: boolean, mic: boolean): void {
+    this.btnCam.classList.toggle('on', cam);
+    this.btnMic.classList.toggle('on', mic);
+    this.btnCam.textContent = cam ? '📷' : '🚫';
+    this.btnMic.textContent = mic ? '🎤' : '🔇';
+  }
+
+  /** Vídeo/áudio de um jogador (null = sem fluxo). O elemento fica sempre no documento para o áudio tocar. */
+  setStream(id: string, stream: MediaStream | null, self: boolean): void {
+    let v = this.videos.get(id);
+    if (!stream) {
+      v?.remove();
+      this.videos.delete(id);
+      return;
+    }
+    if (!v) {
+      v = h('video', { class: 'avatar live', attrs: { autoplay: '', playsinline: '' } });
+      v.muted = self;
+      this.videos.set(id, v);
+      this.holder.append(v);
+    }
+    if (v.srcObject !== stream) v.srcObject = stream;
+    void v.play().catch(() => {});
+  }
+
+  showEmote(id: string, n: number): void {
+    const seat = this.seatOf.get(id);
+    const side = this.root.querySelector(`.pside.seat${seat ?? 0}`);
+    if (!side) return;
+    const b = h('div', { class: 'emote-bubble', text: EMOTES[n] ?? '' });
+    side.append(b);
+    setTimeout(() => b.remove(), 2600);
+  }
+
   private hintT = 0;
   setHint(t: string, ms = 0): void {
     this.hint.textContent = t;
@@ -278,6 +331,7 @@ export class Hud {
       this.renderCard(seat, p, m, v, photos, myId);
       this.renderTray(seat, p, m);
     }
+    for (const [id, el] of this.videos) if (!el.isConnected || !this.root.querySelector('.hud-top')?.contains(el)) this.holder.append(el), void id;
     const mode = MODES.find((x) => x.id === v.mode);
     const kids: (HTMLElement | string)[] = [h('div', { class: 'mode', text: mode?.short ?? '' })];
     if (v.bestOf > 1) kids.push(h('div', { class: 'series', text: `Melhor de ${v.bestOf} · ${v.gamesDone}/${v.bestOf}` }));
@@ -297,9 +351,11 @@ export class Hud {
       if (v.mode === 'bola61') sub = `${m.score[seat] ?? 0} / ${POINTS_TO_WIN} pts`;
       else sub = g ? `${groupName(g)} · ${m.score[seat] ?? 0}/7` : 'Mesa aberta';
     }
+    this.seatOf.set(p.id, seat);
+    const vid = p.cam ? this.videos.get(p.id) : undefined;
     card.replaceChildren(
       ...([
-        avatarEl(p.name, avatarColor(p.id), photos[p.id] ?? null, 'avatar'),
+        vid ?? avatarEl(p.name, avatarColor(p.id), photos[p.id] ?? null, 'avatar'),
         h('div', { class: 'pinfo' }, h('div', { class: 'pname', text: `${p.name}${p.title ? ' ★' : ''}` }), h('div', { class: 'psub', text: sub })),
         v.bestOf > 1 ? h('div', { class: 'pwins', text: String(p.wins) }) : null,
         !p.connected && !p.bot ? h('div', { class: 'poff', text: 'off' }) : null,

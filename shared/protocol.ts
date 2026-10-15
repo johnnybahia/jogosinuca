@@ -12,6 +12,8 @@ export const turnLabel = (s: number): string => (s === 0 ? 'Sem limite' : `${s}s
 export const BEST_OF_OPTIONS = [1, 3, 5] as const;
 export type BestOf = (typeof BEST_OF_OPTIONS)[number];
 export const MAX_PHOTO_CHARS = 30000;
+/** Reações rápidas (balões sobre o cartão do jogador). */
+export const EMOTES = ['👍', '😮', '😂', '😡', '🙏', '⏳', 'GG'] as const;
 export const NAME_MAX = 16;
 /** Folga somada ao relógio de quem joga depois: a tacada precisa terminar de rolar na tela dos dois. */
 export const SHOT_SAFETY_MS = 1500;
@@ -32,6 +34,9 @@ export interface RoomPlayer {
   wins: number;
   /** jogador com título (vitórias contra o Mestre contadas pelo servidor) */
   title?: boolean;
+  /** câmera e microfone ligados (vídeo ao vivo entre os jogadores) */
+  cam: boolean;
+  mic: boolean;
 }
 
 export interface MatchResult {
@@ -88,6 +93,9 @@ export type ClientMsg =
   | { t: 'next' }
   | { t: 'kick'; id: string }
   | { t: 'bot'; on: boolean; level: BotLevel }
+  | { t: 'media'; cam: boolean; mic: boolean }
+  | { t: 'rtc'; to: string; data: unknown }
+  | { t: 'emote'; n: number }
   | { t: 'leave' }
   | { t: 'ping' };
 
@@ -105,6 +113,8 @@ export type ServerMsg =
   | ShotEvent
   | ({ t: 'aim'; from: string } & AimMsg)
   | { t: 'photo'; id: string; data: string }
+  | { t: 'rtc'; from: string; data: unknown }
+  | { t: 'emote'; from: string; n: number }
   | { t: 'notice'; text: string }
   | { t: 'error'; msg: string }
   | { t: 'kicked' }

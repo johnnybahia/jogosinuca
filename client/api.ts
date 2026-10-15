@@ -30,3 +30,11 @@ export async function claimName(id: string, name: string): Promise<boolean> {
     return true;
   }
 }
+
+export async function getIceServers(): Promise<RTCIceServer[]> {
+  try {
+    return (await j<{ iceServers: RTCIceServer[] }>('/api/ice')).iceServers;
+  } catch {
+    return [{ urls: ['stun:stun.l.google.com:19302'] }];
+  }
+}

@@ -6,6 +6,8 @@ export interface BackendEvents {
   onShot(e: ShotEvent): void;
   onAim(from: string, a: AimMsg): void;
   onPhoto(id: string, data: string): void;
+  onRtc(from: string, data: unknown): void;
+  onEmote(from: string, n: number): void;
   onNotice(text: string): void;
   onError(msg: string): void;
   onKicked(): void;
@@ -24,6 +26,9 @@ export interface Backend {
   next(): void;
   bot(on: boolean, level: BotLevel): void;
   kick(id: string): void;
+  media(cam: boolean, mic: boolean): void;
+  rtc(to: string, data: unknown): void;
+  emote(n: number): void;
   leave(): void;
 }
 
@@ -32,6 +37,8 @@ export const noopEvents: BackendEvents = {
   onShot() {},
   onAim() {},
   onPhoto() {},
+  onRtc() {},
+  onEmote() {},
   onNotice() {},
   onError() {},
   onKicked() {},

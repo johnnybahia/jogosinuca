@@ -26,6 +26,23 @@ const isAdmin = (req: Request, env: Env): boolean => {
   return diff === 0;
 };
 
+async function iceServers(env: Env): Promise<unknown[]> {
+  const stun = { urls: ['stun:stun.cloudflare.com:3478', 'stun:stun.l.google.com:19302'] };
+  if (!env.TURN_KEY_ID || !env.TURN_API_TOKEN) return [stun];
+  try {
+    const r = await fetch(`https://rtc.live.cloudflare.com/v1/turn/keys/${env.TURN_KEY_ID}/credentials/generate-ice-servers`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${env.TURN_API_TOKEN}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ttl: 6 * 3600 }),
+    });
+    if (!r.ok) return [stun];
+    const data = (await r.json()) as { iceServers?: unknown[] };
+    return data.iceServers?.length ? [stun, ...data.iceServers] : [stun];
+  } catch {
+    return [stun];
+  }
+}
+
 export default {
   async fetch(req: Request, env: Env): Promise<Response> {
     const url = new URL(req.url);
@@ -39,6 +56,7 @@ export default {
     }
 
     if (url.pathname === '/api/ping') return json({ ok: true, t: Date.now() });
+    if (url.pathname === '/api/ice' && req.method === 'GET') return json({ iceServers: await iceServers(env) });
 
     if (url.pathname === '/api/rooms' && req.method === 'POST') {
       const body = (await req.json().catch(() => ({}))) as { turnSeconds?: number; isPublic?: boolean; mode?: string; bestOf?: number };

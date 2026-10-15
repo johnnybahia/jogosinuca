@@ -30,6 +30,8 @@ export class GameRoom implements DurableObject {
   private s: Stored | null = null;
   private core: RoomCore | null = null;
   private photos: Record<string, string> = {};
+  /** câmera/microfone de cada jogador (só em memória: a mídia acaba junto com a conexão) */
+  private media: Record<string, { cam: boolean; mic: boolean }> = {};
   private loaded: Promise<void>;
 
   constructor(
@@ -71,7 +73,7 @@ export class GameRoom implements DurableObject {
 
   private view(forId: string): RoomView {
     const on = this.online();
-    return this.core!.view(forId, Date.now(), (id) => on.has(id));
+    return this.core!.view(forId, Date.now(), (id) => on.has(id), this.media);
   }
 
   private broadcast(): void {
@@ -289,6 +291,23 @@ export class GameRoom implements DurableObject {
         for (const [id, o] of this.online()) if (id !== me) this.send(o, out);
         return;
       }
+      case 'media': {
+        this.media[me] = { cam: !!msg.cam, mic: !!msg.mic };
+        this.broadcast();
+        return;
+      }
+      case 'rtc': {
+        // sinalização do vídeo ao vivo: só repassa para o destinatário
+        const target = this.online().get(String(msg.to));
+        if (target && JSON.stringify(msg.data ?? null).length < 20000) this.send(target, { t: 'rtc', from: me, data: msg.data });
+        return;
+      }
+      case 'emote': {
+        const n = Math.floor(num(msg.n, -1));
+        if (n < 0 || n > 9) return;
+        for (const [id, o] of this.online()) if (id !== me) this.send(o, { t: 'emote', from: me, n });
+        return;
+      }
       case 'leave': {
         core.leave(me, now);
         delete s.away[me];
@@ -353,6 +372,7 @@ export class GameRoom implements DurableObject {
 
   private async onDisconnect(id: string): Promise<void> {
     const s = this.s!;
+    delete this.media[id];
     const p = s.d.players.find((x) => x.id === id);
     if (!p || p.bot) return;
     const hasOther = [...this.online().keys()].some((x) => x !== id);
