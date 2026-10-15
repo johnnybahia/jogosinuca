@@ -128,6 +128,38 @@ export async function checkForUpdate(): Promise<'update' | 'none' | 'unsupported
   }
 }
 
+/** Compara a versão publicada (version.json, sempre da rede) com a do service worker ativo: avisa mesmo se o navegador não detectou. */
+async function checkRemote(reg: ServiceWorkerRegistration): Promise<void> {
+  try {
+    const r = await fetch(`${import.meta.env.BASE_URL}version.json?t=${Date.now()}`, { cache: 'no-store' });
+    if (!r.ok) return;
+    const remote = ((await r.json()) as { v?: string }).v;
+    if (!remote || !reg.active) return;
+    const mine = await new Promise<string | null>((resolve) => {
+      const t = window.setTimeout(() => {
+        navigator.serviceWorker.removeEventListener('message', h);
+        resolve(null);
+      }, 2500);
+      const h = (e: MessageEvent): void => {
+        const d = e.data as { type?: string; v?: string } | null;
+        if (d?.type !== 'version') return;
+        window.clearTimeout(t);
+        navigator.serviceWorker.removeEventListener('message', h);
+        resolve(d.v ?? null);
+      };
+      navigator.serviceWorker.addEventListener('message', h);
+      reg.active!.postMessage({ type: 'VERSION' });
+    });
+    // sem resposta = service worker antigo (anterior a este aviso)
+    if (mine !== remote) {
+      set({ update: true });
+      void reg.update().catch(() => {});
+    }
+  } catch {
+    /* sem rede */
+  }
+}
+
 function onMessage(e: MessageEvent): void {
   const d = e.data as { type?: string; done?: number; total?: number; fresh?: boolean; missing?: number } | null;
   if (!d?.type) return;
@@ -157,9 +189,16 @@ async function start(): Promise<void> {
     void navigator.serviceWorker.ready.then((r) => r.active?.postMessage({ type: 'STATUS' }));
     // app instalado fica aberto por muito tempo: procura versão nova ao voltar para a frente
     document.addEventListener('visibilitychange', () => {
-      if (document.visibilityState === 'visible') void reg.update().catch(() => {});
+      if (document.visibilityState === 'visible') {
+        void reg.update().catch(() => {});
+        void checkRemote(reg);
+      }
     });
-    setInterval(() => void reg.update().catch(() => {}), 30 * 60 * 1000);
+    setInterval(() => {
+      void reg.update().catch(() => {});
+      void checkRemote(reg);
+    }, 10 * 60 * 1000);
+    void navigator.serviceWorker.ready.then((r) => window.setTimeout(() => void checkRemote(r), 3000));
   } catch {
     /* sem service worker: o jogo só precisa da conexão */
   }

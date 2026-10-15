@@ -89,6 +89,7 @@ self.addEventListener('activate', (e) => {
 self.addEventListener('message', async (e) => {
   const d = e.data || {};
   if (d.type === 'SKIP_WAITING') self.skipWaiting();
+  if (d.type === 'VERSION') broadcast({ type: 'version', v: VERSION });
   if (d.type === 'STATUS') {
     const cache = await caches.open(CACHE);
     let missing = 0;
@@ -112,7 +113,7 @@ self.addEventListener('fetch', (e) => {
   if (req.method !== 'GET') return;
   const url = new URL(req.url);
   if (url.origin !== self.location.origin) return;
-  if (url.pathname.startsWith(`${BASE}api/`) || url.pathname.startsWith(`${BASE}ws/`) || url.pathname === `${BASE}sw.js`) return;
+  if (url.pathname.startsWith(`${BASE}api/`) || url.pathname.startsWith(`${BASE}ws/`) || url.pathname === `${BASE}sw.js` || url.pathname === `${BASE}version.json`) return;
 
   e.respondWith(
     (async () => {

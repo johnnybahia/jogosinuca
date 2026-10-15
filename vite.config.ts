@@ -32,6 +32,7 @@ function offlinePlugin(): Plugin {
       files.sort((a, b) => a.url.localeCompare(b.url));
       const version = createHash('sha1').update(files.map((f) => f.url + f.hash).join('|')).digest('hex').slice(0, 10);
       const tpl = readFileSync('scripts/sw.template.js', 'utf8');
+      writeFileSync(join(outDir, 'version.json'), JSON.stringify({ v: version }));
       writeFileSync(join(outDir, 'sw.js'), tpl.replace('__VERSION__', version).replace('__BASE__', base).replace('__FILES__', JSON.stringify(files)));
     },
   };
