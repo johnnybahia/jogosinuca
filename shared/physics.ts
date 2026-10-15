@@ -37,6 +37,7 @@ export interface Ball {
   rest: boolean;
 }
 
+
 export type SimEvent =
   | { t: number; k: 'ball'; a: number; b: number; v: number }
   | { t: number; k: 'cushion'; a: number; v: number }
@@ -102,6 +103,7 @@ export class Sim {
   railAfterHit = false;
   cushionTouched = new Set<number>();
   private cueHitSeen = false;
+  private dirty = false;
 
   constructor(balls: Ball[]) {
     this.balls = balls;
@@ -230,6 +232,8 @@ export class Sim {
   }
 
   private cushions(b: Ball): void {
+    // longe da borda não há tabela nem caçapa
+    if (b.x > -HL + 0.2 && b.x < HL - 0.2 && b.y > -HW + 0.2 && b.y < HW - 0.2) return;
     // caçapas primeiro: o centro cruzou a boca
     for (let i = 0; i < POCKETS.length; i++) {
       const p = POCKETS[i]!;
@@ -257,8 +261,6 @@ export class Sim {
       this.emit({ t: this.t, k: 'pocket', a: b.id, p: -1, v: 0 });
       return;
     }
-    // só perto da borda vale testar as tabelas
-    if (b.x > -HL + 0.2 && b.x < HL - 0.2 && b.y > -HW + 0.2 && b.y < HW - 0.2) return;
     for (let i = 0; i < SEGS.length; i++) {
       const s = SEGS[i]!;
       const d = (b.x - s.x1) * s.nx + (b.y - s.y1) * s.ny;
@@ -357,6 +359,7 @@ export class Sim {
       c.wz += dw;
       a.rest = false;
       c.rest = false;
+      this.dirty = true;
       if (!this.cueHitSeen && (a.id === 0 || c.id === 0)) {
         this.cueHitSeen = true;
         this.firstHit = a.id === 0 ? c.id : a.id;
@@ -369,10 +372,22 @@ export class Sim {
     c.y += c.vy * tau;
   }
 
-  /** Avança um passo de tempo. */
-  step(dt = DT): void {
+  /** Passo adaptativo: bolas lentas andam em passos maiores (4x, 2x ou 1x o DT). Determinístico (só depende do estado). */
+  nextDt(): number {
+    let v2 = 0;
+    for (const b of this.balls) {
+      if (!b || !b.on || b.rest) continue;
+      const s2 = b.vx * b.vx + b.vy * b.vy;
+      if (s2 > v2) v2 = s2;
+    }
+    return v2 > 7.3 ? DT : v2 > 1.82 ? DT * 2 : DT * 4;
+  }
+
+  /** Avança um passo de tempo (devolve o dt usado). */
+  step(dt = DT): number {
     const bs = this.balls;
     const n = bs.length;
+    this.dirty = false;
     for (let i = 0; i < n; i++) {
       const b = bs[i];
       if (!b || !b.on || b.rest) continue;
@@ -390,21 +405,26 @@ export class Sim {
       }
     }
     // bolas empurradas pelas colisões ainda podem ter ido de encontro às tabelas
-    for (let i = 0; i < n; i++) {
-      const b = bs[i];
-      if (!b || !b.on || b.rest) continue;
-      this.cushions(b);
+    if (this.dirty) {
+      for (let i = 0; i < n; i++) {
+        const b = bs[i];
+        if (!b || !b.on || b.rest) continue;
+        this.cushions(b);
+      }
     }
     this.t += dt;
+    return dt;
+  }
+
+  /** Um passo com dt adaptativo. */
+  stepAuto(): number {
+    return this.step(this.nextDt());
   }
 
   /** Roda até tudo parar (ou o tempo máximo). Retorna o tempo simulado. */
   run(maxT = 40): number {
-    const steps = Math.ceil(maxT / DT);
-    for (let i = 0; i < steps; i++) {
-      if (!this.moving()) break;
-      this.step();
-    }
+    const t0 = this.t;
+    while (this.t - t0 < maxT && this.moving()) this.stepAuto();
     return this.t;
   }
 }

@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { aimTrace } from '../../shared/aim';
-import { DT, Sim, strike, type BallPos, type ShotParams, type SimEvent } from '../../shared/physics';
+import { Sim, strike, type BallPos, type ShotParams, type SimEvent } from '../../shared/physics';
 import { Assets } from './assets';
 import { sndBall, sndCue, sndCushion, sndPocket } from './audio';
 import { BallsView } from './ballsView';
@@ -275,9 +275,10 @@ export class PoolView {
     const ts = Math.max(1, this.timeScale);
     this.acc = Math.min(this.acc + dt * this.timeScale, 0.06 * ts);
     let steps = 0;
-    while (this.acc >= DT && steps < 40 * ts) {
-      sim.step();
-      this.acc -= DT;
+    for (;;) {
+      const d = sim.nextDt();
+      if (this.acc < d || steps >= 40 * ts) break;
+      this.acc -= sim.step(d);
       steps++;
       if (!sim.moving()) break;
     }

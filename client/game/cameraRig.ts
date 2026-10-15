@@ -63,10 +63,12 @@ export class CameraRig {
     let gDist = this.userDist;
     let gTop = 0;
     let fovT = 42;
+    const narrow = Math.max(0, 1 - this.aspect);
     if (this.mode === 'aim') {
       gYaw = -this.aimAngle + Math.PI; // câmera atrás: oposta à direção (física -> cena: z = -y)
-      // aspecto vertical (celular): mais distante e um pouco mais alta
-      if (this.aspect < 0.9) gDist *= 1.18;
+      // aspecto vertical (celular): abre o campo de visão para a mesa caber na largura
+      fovT = 42 + narrow * 40;
+      gDist *= 1 + narrow * 0.25;
     } else if (this.mode === 'follow') {
       const f = follow ?? { x: this.tx, y: this.ty };
       gx = f.x;
@@ -74,6 +76,7 @@ export class CameraRig {
       gYaw = -this.aimAngle + Math.PI;
       gPitch = Math.max(this.userPitch, 0.62);
       gDist = this.userDist * 1.55;
+      fovT = 42 + narrow * 40;
     } else if (this.mode === 'top') {
       gx = 0;
       gy = 0;

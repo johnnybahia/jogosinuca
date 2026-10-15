@@ -13,6 +13,7 @@ import type { AimMsg, RoomView, ShotEvent } from '../../shared/protocol';
 import { MODES, groupName, nearestFree, targets, type MatchState } from '../../shared/rules';
 import { getPwa, applyUpdate } from '../pwa';
 import { qualityOptions } from './settings';
+import { LobbyPanel } from './lobby';
 
 export interface GameOpts {
   view: PoolView;
@@ -55,6 +56,7 @@ export class GameScreen {
   private streak = 0;
   private countedGame = -1;
   private connBanner: HTMLElement | null = null;
+  private lobby: LobbyPanel | null = null;
 
   constructor(private o: GameOpts) {
     this.view = o.view;
@@ -71,6 +73,7 @@ export class GameScreen {
       onConfirmPlace: () => this.confirmPlace(),
     });
     o.root.replaceChildren(this.hud.root);
+    if (o.backend.mode === 'online') this.lobby = new LobbyPanel(o.backend, o.profile.id, () => this.confirmExit());
     this.input = new AimInput(o.view.canvas, o.view, {
       mode: () => this.inputMode(),
       rotate: (d) => this.rotate(d),
@@ -93,7 +96,10 @@ export class GameScreen {
       onAim: (from, a) => this.onOppAim(from, a),
       onPhoto: (id, data) => {
         this.photos[id] = data;
-        if (this.v) this.hud.update(this.v, this.photos, this.profile.id);
+        if (this.v) {
+          if (this.v.phase === 'lobby') this.lobby?.render(this.v, this.photos);
+          else this.hud.update(this.v, this.photos, this.profile.id);
+        }
       },
       onNotice: (t) => toast(t),
       onError: (m) => {
@@ -156,6 +162,22 @@ export class GameScreen {
   private apply(v: RoomView, afterShot: boolean): void {
     const prevSeq = this.lastSeq;
     this.v = v;
+    if (this.lobby) {
+      if (v.phase === 'lobby') {
+        if (!this.lobby.el.isConnected) this.o.root.append(this.lobby.el);
+        this.lobby.render(v, this.photos);
+        this.hud.root.style.display = 'none';
+        this.view.setCameraMode('menu');
+        this.view.setAim(null);
+        this.phase = 'wait';
+        return;
+      }
+      if (this.lobby.el.isConnected) {
+        this.lobby.el.remove();
+        this.hud.root.style.display = '';
+        this.view.setBalls(v.match?.balls ?? []);
+      }
+    }
     this.hud.update(v, this.photos, this.profile.id);
     const m = v.match;
     if (!m) {
@@ -252,7 +274,7 @@ export class GameScreen {
     this.top = this.top && this.phase === 'aim' ? this.top : false;
     this.view.setCameraMode(this.top ? 'top' : 'aim');
     this.view.setAim(this.aim, loadPrefs().guide);
-    this.hud.setHint(announce ? 'Arraste para mirar · puxe a força para baixo e solte' : '');
+    this.hud.setHint(announce ? 'Arraste para mirar · puxe a força para baixo e solte' : '', 5000);
     if (announce) {
       sndTurn();
       const mode = MODES.find((x) => x.id === this.v!.mode);
@@ -620,6 +642,7 @@ export class GameScreen {
     this.view.setAim(null);
     this.overlay?.close();
     this.connBanner?.remove();
+    this.lobby?.el.remove();
     this.backend.leave();
     this.o.root.replaceChildren();
     this.o.onExit();

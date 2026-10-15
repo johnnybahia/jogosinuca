@@ -1,11 +1,14 @@
 import './style.css';
 import { LocalBackend } from './local';
+import { OnlineBackend } from './net/online';
+import { claimName, createRoom, getRanking, listRooms } from './api';
 import { GameScreen } from './ui/gameScreen';
 import { btn, h, toast } from './ui/dom';
 import { showMenu, showProfile } from './ui/screens';
 import { PoolView } from './game/view';
 import { registerPwa } from './pwa';
-import { applyPrefsToPage, loadPrefs, loadProfile, type OfflineSettings, type Profile } from './store';
+import { newMatch } from '../shared/rules';
+import { applyPrefsToPage, loadOfflineSettings, loadPrefs, loadProfile, type OfflineSettings, type Profile } from './store';
 
 registerPwa();
 applyPrefsToPage();
@@ -27,7 +30,7 @@ try {
   throw e;
 }
 view.setFelt(loadPrefs().felt);
-const m0 = (await import('../shared/rules')).newMatch('par_impar');
+const m0 = newMatch('par_impar');
 view.setBalls(m0.balls);
 view.setAim(null);
 view.setCameraMode('menu');
@@ -51,7 +54,7 @@ function menu(): void {
     showProfile(root, null, (p) => {
       profile = p;
       menu();
-    });
+    }, undefined, claimName);
     return;
   }
   stopMenu = showMenu(
@@ -62,8 +65,23 @@ function menu(): void {
       startOffline,
       setQuality: (q) => view.setQuality(q),
       setFelt: (id) => view.setFelt(id),
+      online: {
+        create: async (isPublic) => {
+          if (!navigator.onLine) return void toast('Sem internet: use o modo offline.');
+          try {
+            const cfg = loadOfflineSettings();
+            const { code } = await createRoom({ mode: cfg.mode, turnSeconds: cfg.turnSeconds || 60, isPublic, bestOf: 1 });
+            startOnline(code);
+          } catch {
+            toast('Não consegui criar a sala. Confira a conexão.');
+          }
+        },
+        join: (code) => startOnline(code),
+        publicRooms: () => listRooms(),
+        ranking: () => getRanking(),
+      },
     } as Parameters<typeof showMenu>[1],
-    () => showProfile(root, profile, (p) => { profile = p; menu(); }, () => menu()),
+    () => showProfile(root, profile, (p) => { profile = p; menu(); }, () => menu(), claimName),
   );
 }
 
@@ -80,6 +98,28 @@ function startOffline(cfg: OfflineSettings): void {
   });
 }
 
+function startOnline(code: string): void {
+  if (!profile) return;
+  if (!navigator.onLine) return void toast('Sem internet: use o modo offline.');
+  const p = profile;
+  stopMenu?.();
+  stopMenu = null;
+  history.replaceState(null, '', `${location.pathname}?sala=${code}`);
+  new GameScreen({
+    view,
+    backend: new OnlineBackend(code, p),
+    profile: p,
+    root,
+    onExit: () => {
+      history.replaceState(null, '', location.pathname);
+      menu();
+    },
+  });
+}
+
 menu();
+// link de convite: ?sala=ABCDE
+const invite = new URLSearchParams(location.search).get('sala')?.toUpperCase();
+if (invite && /^[A-Z0-9]{5}$/.test(invite) && profile) startOnline(invite);
 (window as unknown as { done: boolean }).done = true;
 void toast;

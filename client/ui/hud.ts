@@ -243,9 +243,12 @@ export class Hud {
     this.btnSound.textContent = s.muted ? '✕' : '♪';
   }
 
-  setHint(t: string): void {
+  private hintT = 0;
+  setHint(t: string, ms = 0): void {
     this.hint.textContent = t;
     this.hint.classList.toggle('show', !!t);
+    window.clearTimeout(this.hintT);
+    if (t && ms) this.hintT = window.setTimeout(() => this.hint.classList.remove('show'), ms);
   }
 
   showBanner(title: string, sub = '', kind: 'good' | 'bad' | 'info' = 'info', ms = 2200): void {

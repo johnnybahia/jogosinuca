@@ -23,6 +23,7 @@ html, body { margin: 0; height: 100%; background: var(--bg); overflow: hidden; o
 #gl { width: 100%; height: 100%; display: block; touch-action: none; outline: none; }
 #app { position: fixed; inset: 0; pointer-events: none; }
 #app > * { pointer-events: auto; }
+#app > .hud { pointer-events: none; }
 button { font: inherit; color: inherit; }
 input { font: inherit; }
 [hidden] { display: none !important; }
@@ -170,7 +171,7 @@ input { font: inherit; }
 .banner-in.good .banner-t { color: var(--good); }
 .banner-in.info .banner-t { color: var(--gold); }
 .banner-s { color: #d9d3c8; margin-top: 4px; font-size: 0.95rem; }
-.hint { position: absolute; left: 0; right: 0; bottom: calc(var(--sab) + 64px); text-align: center; font-size: 0.85rem; color: #d9d3c8; text-shadow: 0 2px 8px #000; opacity: 0; transition: opacity 0.3s; }
+.hint { position: absolute; left: 0; right: 0; bottom: calc(var(--sab) + 64px); padding: 0 120px; text-align: center; font-size: 0.85rem; color: #d9d3c8; text-shadow: 0 2px 8px #000; opacity: 0; transition: opacity 0.3s; }
 .hint.show { opacity: 0.9; }
 
 /* força (direita): puxe a alça para baixo e solte */
@@ -230,3 +231,19 @@ input { font: inherit; }
   .pcenter { display: none; }
   .hud-top { grid-template-columns: 1fr 1fr; }
 }
+
+/* ---------- saguão online ---------- */
+.lobby { background: radial-gradient(ellipse at 50% 30%, rgba(17, 48, 30, 0.55), rgba(7, 9, 12, 0.92) 70%); }
+.lobby-box { width: min(540px, 94vw); max-height: 94vh; overflow: auto; touch-action: pan-y; display: grid; gap: 14px; }
+.lobby-code { text-align: center; }
+.code-big { font: 800 2.6rem ui-monospace, monospace; letter-spacing: 0.4em; padding-left: 0.4em; color: var(--gold); text-shadow: 0 0 24px rgba(230, 195, 92, 0.35); }
+.slots { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.slot { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 14px; background: rgba(255, 255, 255, 0.05); border: 1px solid var(--line); min-width: 0; }
+.slot.me { border-color: rgba(230, 195, 92, 0.45); }
+.slot.empty { opacity: 0.6; border-style: dashed; }
+.slot-t { min-width: 0; flex: 1; }
+.slot-n { font-weight: 700; font-size: 0.92rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.slot-s { font-size: 0.74rem; }
+.lobby-settings { display: grid; gap: 2px; }
+.btn.disabled { opacity: 0.5; filter: grayscale(0.6); }
+@media (max-width: 520px) { .slots { grid-template-columns: 1fr; } .code-big { font-size: 2rem; } }
