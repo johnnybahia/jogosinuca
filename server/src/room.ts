@@ -1,6 +1,6 @@
 import { thinkMs, type BotLevel } from '../../shared/bot';
 import { MAX_PHOTO_CHARS, type ClientMsg, type RoomView, type ServerMsg, type ShotEvent } from '../../shared/protocol';
-import { cleanName, newRoom, RoomCore, type RoomData } from '../../shared/room';
+import { cleanName, newRoom, publicId, RoomCore, type RoomData } from '../../shared/room';
 import type { Env } from './env';
 
 interface Stored {
@@ -59,6 +59,16 @@ export class GameRoom implements DurableObject {
     return m;
   }
 
+  private pub(id: string): string {
+    return publicId(id, this.s?.d.code ?? '');
+  }
+
+  /** id público → id de verdade (só de quem está na sala). */
+  private resolve(pid: unknown): string | null {
+    const p = this.s?.d.players.find((x) => this.pub(x.id) === String(pid));
+    return p ? p.id : null;
+  }
+
   private send(ws: WebSocket, msg: ServerMsg): void {
     try {
       ws.send(JSON.stringify(msg));
@@ -73,7 +83,7 @@ export class GameRoom implements DurableObject {
 
   private view(forId: string): RoomView {
     const on = this.online();
-    return this.core!.view(forId, Date.now(), (id) => on.has(id), this.media);
+    return this.core!.view(forId, Date.now(), (id) => on.has(id), this.media, (id) => this.pub(id));
   }
 
   private broadcast(): void {
@@ -267,13 +277,14 @@ export class GameRoom implements DurableObject {
         return;
       }
       case 'kick': {
-        const target = this.online().get(String(msg.id));
-        if (core.kick(me, String(msg.id))) {
+        const realId = this.resolve(msg.id) ?? '';
+        const target = this.online().get(realId);
+        if (core.kick(me, realId)) {
           if (target) {
             this.send(target, { t: 'kicked' });
             target.close(4001, 'kicked');
           }
-          delete s.away[String(msg.id)];
+          delete s.away[realId];
           await this.after({ list: true });
         }
         return;
@@ -287,7 +298,7 @@ export class GameRoom implements DurableObject {
       case 'aim': {
         // mira ao vivo: só do jogador da vez, repassada aos demais (sem guardar)
         if (core.d.phase !== 'playing' || core.turnPlayer?.id !== me) return;
-        const out: ServerMsg = { t: 'aim', from: me, angle: num(msg.angle), a: Math.max(-1, Math.min(1, num(msg.a))), b: Math.max(-1, Math.min(1, num(msg.b))), pull: Math.max(0, Math.min(0.4, num(msg.pull))), cx: msg.cx === undefined ? undefined : num(msg.cx), cy: msg.cy === undefined ? undefined : num(msg.cy) };
+        const out: ServerMsg = { t: 'aim', from: this.pub(me), angle: num(msg.angle), a: Math.max(-1, Math.min(1, num(msg.a))), b: Math.max(-1, Math.min(1, num(msg.b))), pull: Math.max(0, Math.min(0.4, num(msg.pull))), cx: msg.cx === undefined ? undefined : num(msg.cx), cy: msg.cy === undefined ? undefined : num(msg.cy) };
         for (const [id, o] of this.online()) if (id !== me) this.send(o, out);
         return;
       }
@@ -298,14 +309,14 @@ export class GameRoom implements DurableObject {
       }
       case 'rtc': {
         // sinalização do vídeo ao vivo: só repassa para o destinatário
-        const target = this.online().get(String(msg.to));
-        if (target && JSON.stringify(msg.data ?? null).length < 20000) this.send(target, { t: 'rtc', from: me, data: msg.data });
+        const target = this.online().get(this.resolve(msg.to) ?? '');
+        if (target && JSON.stringify(msg.data ?? null).length < 20000) this.send(target, { t: 'rtc', from: this.pub(me), data: msg.data });
         return;
       }
       case 'emote': {
         const n = Math.floor(num(msg.n, -1));
         if (n < 0 || n > 9) return;
-        for (const [id, o] of this.online()) if (id !== me) this.send(o, { t: 'emote', from: me, n });
+        for (const [id, o] of this.online()) if (id !== me) this.send(o, { t: 'emote', from: this.pub(me), n });
         return;
       }
       case 'leave': {
@@ -345,9 +356,9 @@ export class GameRoom implements DurableObject {
     if (validPhoto(msg.photo)) {
       this.photos[id] = msg.photo;
       await this.ctx.storage.put('photos', this.photos);
-      for (const [oid, ows] of this.online()) if (oid !== id) this.send(ows, { t: 'photo', id, data: msg.photo });
+      for (const [oid, ows] of this.online()) if (oid !== id) this.send(ows, { t: 'photo', id: this.pub(id), data: msg.photo });
     }
-    for (const [pid, data] of Object.entries(this.photos)) if (pid !== id) this.send(ws, { t: 'photo', id: pid, data });
+    for (const [pid, data] of Object.entries(this.photos)) if (pid !== id) this.send(ws, { t: 'photo', id: this.pub(pid), data });
     this.touch();
     await this.persist();
     // quem entra recebe o estado já com a posição das bolas (reconexão no meio da partida não repete animação)

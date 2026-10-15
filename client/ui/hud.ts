@@ -33,6 +33,7 @@ export interface HudHandlers {
   onCam?(): void;
   onMic?(): void;
   onEmote?(n: number): void;
+  onHint?(): void;
 }
 
 /** Interface sobre o canvas: cartões dos jogadores, bandeja de bolas, força, efeito, mensagens. */
@@ -61,6 +62,8 @@ export class Hud {
   private btnCam!: HTMLButtonElement;
   private btnMic!: HTMLButtonElement;
   private btnEmote!: HTMLButtonElement;
+  private btnHint!: HTMLButtonElement;
+  private powerHint = h('div', { class: 'power-hint' });
   private emotes = h('div', { class: 'emotes' });
   private holder = h('div', { class: 'rtc-holder' });
   private videos = new Map<string, HTMLVideoElement>();
@@ -87,12 +90,14 @@ export class Hud {
     this.btnCam = mk('📷', 'Câmera', () => hd.onCam?.());
     this.btnMic = mk('🎤', 'Microfone', () => hd.onMic?.());
     this.btnEmote = mk('💬', 'Reações', () => this.emotes.classList.toggle('open'));
+    this.btnHint = mk('💡', 'Dica de tacada (H)', () => hd.onHint?.());
+    this.btnHint.hidden = true;
     for (const b of [this.btnCam, this.btnMic, this.btnEmote]) b.hidden = true;
     EMOTES.forEach((e, i) => this.emotes.append(h('button', { class: 'emote-btn', text: e, attrs: { type: 'button' }, on: { click: () => { this.emotes.classList.remove('open'); hd.onEmote?.(i); } } })));
-    const tools = h('div', { class: 'tools' }, this.btnView, this.btnGuide, this.btnSound, this.btnCam, this.btnMic, this.btnEmote, btnMenu);
+    const tools = h('div', { class: 'tools' }, this.btnView, this.btnGuide, this.btnSound, this.btnHint, this.btnCam, this.btnMic, this.btnEmote, btnMenu);
 
     // força: puxe a alça para baixo e solte para tacar
-    this.power.append(h('div', { class: 'power-track' }, this.powerFill), this.powerKnob, this.powerLabel);
+    this.power.append(h('div', { class: 'power-track' }, this.powerFill), this.powerHint, this.powerKnob, this.powerLabel);
     this.bindPower();
 
     // efeito (ponto de contato na bola branca)
@@ -257,9 +262,16 @@ export class Hud {
     this.btnSound.textContent = s.muted ? '✕' : '♪';
   }
 
-  /** Liga os botões de vídeo/reações (só no jogo online). */
+  /** Liga os botões de vídeo/reações (só no jogo online); a dica de tacada só fora do online. */
   setOnline(on: boolean): void {
     for (const b of [this.btnCam, this.btnMic, this.btnEmote]) b.hidden = !on;
+    this.btnHint.hidden = on;
+  }
+
+  /** Marca na barra de força o valor sugerido (null = some). */
+  setPowerHint(p: number | null): void {
+    this.powerHint.style.display = p === null ? 'none' : 'block';
+    if (p !== null) this.powerHint.style.top = `calc(30px + (100% - 60px) * ${p})`;
   }
 
   setMedia(cam: boolean, mic: boolean): void {

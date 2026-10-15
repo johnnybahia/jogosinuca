@@ -56,6 +56,21 @@ export interface RoomData {
   practice?: boolean;
 }
 
+/** Identificador público do jogador numa sala: o servidor nunca mostra o id de verdade (quem soubesse dele poderia tomar o lugar). */
+export function publicId(id: string, code: string): string {
+  let h1 = 0xdeadbeef ^ code.length;
+  let h2 = 0x41c6ce57 ^ id.length;
+  const str = `${code}:${id}`;
+  for (let i = 0; i < str.length; i++) {
+    const c = str.charCodeAt(i);
+    h1 = Math.imul(h1 ^ c, 2654435761);
+    h2 = Math.imul(h2 ^ c, 1597334677);
+  }
+  h1 = Math.imul(h1 ^ (h1 >>> 16), 2246822507) ^ Math.imul(h2 ^ (h2 >>> 13), 3266489909);
+  h2 = Math.imul(h2 ^ (h2 >>> 16), 2246822507) ^ Math.imul(h1 ^ (h1 >>> 13), 3266489909);
+  return `p${(h2 >>> 0).toString(16).padStart(8, '0')}${(h1 >>> 0).toString(16).padStart(8, '0')}`;
+}
+
 export const cleanName = (n: unknown): string => String(n ?? '').replace(/[\u0000-\u001f<>]/g, '').trim().slice(0, NAME_MAX) || 'Jogador';
 
 export function newRoom(code: string, opts: { mode?: Mode; turnSeconds?: number; isPublic?: boolean; bestOf?: number } = {}): RoomData {
@@ -89,10 +104,10 @@ export class RoomCore {
     return this.d.match ? this.player(this.d.match.turn) : undefined;
   }
 
-  view(forId: string, now: number, connected: (id: string) => boolean, media: Record<string, { cam: boolean; mic: boolean }> = {}): RoomView {
+  view(forId: string, now: number, connected: (id: string) => boolean, media: Record<string, { cam: boolean; mic: boolean }> = {}, pub: (id: string) => string = (x) => x): RoomView {
     const d = this.d;
-    const players: RoomPlayer[] = d.players.map((p) => ({ id: p.id, name: p.name, seat: p.seat, connected: p.bot || connected(p.id), isHost: p.id === d.hostId, bot: p.bot, botLevel: p.botLevel, left: p.left, wins: p.wins, title: p.title, cam: !!media[p.id]?.cam, mic: !!media[p.id]?.mic }));
-    return { t: 'state', code: d.code, phase: d.phase, hostId: d.hostId, mode: d.mode, turnSeconds: d.turnSeconds, bestOf: d.bestOf, isPublic: d.isPublic, you: forId, players, match: d.match, shotSeq: d.shotSeq, turnEndsAt: d.turnEndsAt, serverNow: now, gamesDone: d.gamesDone, practice: d.practice, result: d.result, last: d.last };
+    const players: RoomPlayer[] = d.players.map((p) => ({ id: pub(p.id), name: p.name, seat: p.seat, connected: p.bot || connected(p.id), isHost: p.id === d.hostId, bot: p.bot, botLevel: p.botLevel, left: p.left, wins: p.wins, title: p.title, cam: !!media[p.id]?.cam, mic: !!media[p.id]?.mic }));
+    return { t: 'state', code: d.code, phase: d.phase, hostId: pub(d.hostId), mode: d.mode, turnSeconds: d.turnSeconds, bestOf: d.bestOf, isPublic: d.isPublic, you: pub(forId), players, match: d.match, shotSeq: d.shotSeq, turnEndsAt: d.turnEndsAt, serverNow: now, gamesDone: d.gamesDone, practice: d.practice, result: d.result, last: d.last };
   }
 
   // ---------- saguão

@@ -1,4 +1,5 @@
-import { powerToSpeed, type BallPos, type SimEvent } from '../../shared/physics';
+import { botPlan } from '../../shared/bot';
+import { MAX_SPEED, MIN_SPEED, powerToSpeed, type BallPos, type SimEvent } from '../../shared/physics';
 import { avatarEl, btn, h, modal, toast, segmented } from './dom';
 import { Hud } from './hud';
 import type { Backend } from '../backend';
@@ -60,6 +61,7 @@ export class GameScreen {
   /** identifica o "momento" da mesa: atualizações do servidor que não mudam isso (vídeo, conexão…) não reiniciam a mira */
   private turnKey = '';
   private peerIds: string[] = [];
+  private rtcStarting = false;
   private offPwa: (() => void) | null = null;
 
   constructor(private o: GameOpts) {
@@ -75,15 +77,16 @@ export class GameScreen {
       onMenu: () => this.openMenu(),
       onFine: (d) => this.rotate(d * 0.0016 * (this.view.cam.userDist / 1.05)),
       onConfirmPlace: () => this.confirmPlace(),
+      onHint: () => this.hint(),
       onCam: () => void this.toggleMedia('cam'),
       onMic: () => void this.toggleMedia('mic'),
       onEmote: (n) => {
         this.backend.emote(n);
-        this.hud.showEmote(this.profile.id, n);
+        this.hud.showEmote(this.you, n);
       },
     });
     o.root.replaceChildren(this.hud.root);
-    if (o.backend.mode === 'online') this.lobby = new LobbyPanel(o.backend, o.profile.id, () => this.confirmExit());
+    if (o.backend.mode === 'online') this.lobby = new LobbyPanel(o.backend, () => this.confirmExit());
     this.input = new AimInput(o.view.canvas, o.view, {
       mode: () => this.inputMode(),
       rotate: (d) => this.rotate(d),
@@ -107,7 +110,7 @@ export class GameScreen {
         this.photos[id] = data;
         if (this.v) {
           if (this.v.phase === 'lobby') this.lobby?.render(this.v, this.photos);
-          else this.hud.update(this.v, this.photos, this.profile.id);
+          else this.hud.update(this.v, this.photos, this.v.you);
         }
       },
       onNotice: (t) => toast(t),
@@ -127,17 +130,18 @@ export class GameScreen {
       onConn: (s) => this.onConn(s),
     };
     this.offPwa = onPwa((st) => this.setUpdate(st.update));
-    if (o.backend.mode === 'online') {
-      this.hud.setOnline(true);
-      void this.initRtc();
-    }
+    this.hud.setOnline(o.backend.mode === 'online');
     (window as unknown as { __game: GameScreen }).__game = this;
     be.connect();
   }
 
   // ---------- estado ----------
+  /** meu identificador público na sala (o servidor não mostra o id de verdade) */
+  private get you(): string {
+    return this.v?.you ?? this.profile.id;
+  }
   private get mySeat(): number {
-    return this.v?.players.find((p) => p.id === this.profile.id)?.seat ?? -1;
+    return this.v?.players.find((p) => p.id === this.v?.you)?.seat ?? -1;
   }
   private get match(): MatchState | null {
     return this.v?.match ?? null;
@@ -177,7 +181,11 @@ export class GameScreen {
 
   private syncPeers(v: RoomView): void {
     if (this.backend.mode !== 'online') return;
-    this.peerIds = v.players.filter((p) => !p.bot && !p.left).map((p) => p.id);
+    if (!this.rtc && !this.rtcStarting) {
+      this.rtcStarting = true;
+      void this.initRtc();
+    }
+    this.peerIds = v.players.filter((p) => !p.bot && !p.left && p.id !== v.you).map((p) => p.id);
     this.rtc?.setPeers(this.peerIds);
   }
 
@@ -201,7 +209,7 @@ export class GameScreen {
       }
     }
     this.syncPeers(v);
-    this.hud.update(v, this.photos, this.profile.id);
+    this.hud.update(v, this.photos, v.you);
     const m = v.match;
     if (!m) {
       this.view.setAim(null);
@@ -285,6 +293,7 @@ export class GameScreen {
     this.hud.setPlacing(false);
     this.hud.setEnabled(true);
     this.hud.setPower(0);
+    this.hud.setPowerHint(null);
     const c = this.placed ?? m.balls.find((b) => b.id === 0)!;
     if (this.placed) this.view.setCueBall(this.placed.x, this.placed.y);
     // mira inicial: para a bola alvo mais próxima
@@ -400,9 +409,35 @@ export class GameScreen {
     this.phase = 'shooting';
     this.pendingShot = true;
     this.hud.setEnabled(false);
+    this.hud.setPowerHint(null);
     this.hud.setHint('');
     const msg = { dx: Math.cos(this.aim.angle), dy: Math.sin(this.aim.angle), v: powerToSpeed(power), a: this.aim.a, b: this.aim.b, cue: m.inHand !== 'none' ? { x: pos.x, y: pos.y } : undefined };
     this.backend.shot(msg);
+  }
+
+  /** Dica (só offline): o melhor lance que o Mestre acharia para a posição atual. */
+  private hint(): void {
+    const m = this.match;
+    if (!m || this.backend.mode === 'online' || (this.phase !== 'aim' && this.phase !== 'place')) return;
+    const plan = botPlan(m, 'mestre');
+    sndClick();
+    if (this.phase === 'place') {
+      if (plan.cue) {
+        this.placed = { x: plan.cue.x, y: plan.cue.y };
+        this.view.setCueBall(plan.cue.x, plan.cue.y);
+        this.hud.showBanner('Dica', 'Posição sugerida para a branca', 'info', 1400);
+      }
+      return;
+    }
+    this.aim.angle = Math.atan2(plan.shot.dy, plan.shot.dx);
+    this.aim.a = plan.shot.a;
+    this.aim.b = plan.shot.b;
+    this.hud.setSpin(plan.shot.a, plan.shot.b);
+    const q = Math.min(1, Math.max(0, (plan.shot.v - MIN_SPEED) / (MAX_SPEED - MIN_SPEED)));
+    const p = (-0.35 + Math.sqrt(0.1225 + 2.6 * q)) / 1.3;
+    this.hud.setPowerHint(p);
+    this.view.setAim(this.aim, true);
+    this.hud.showBanner('Dica', 'Mira e força sugeridas (a marca na barra de força)', 'info', 1800);
   }
 
   private toggleView(): void {
@@ -433,6 +468,7 @@ export class GameScreen {
     if (this.overlay) return;
     if (k === 'v' || k === 'V') return this.toggleView();
     if (k === 'g' || k === 'G') return this.toggleGuide();
+    if (k === 'h' || k === 'H') return this.hint();
     if (k === 'm' || k === 'M') return this.toggleSound();
     if (k === ' ' && this.phase === 'aim') {
       e.preventDefault();
@@ -461,7 +497,7 @@ export class GameScreen {
 
   // ---------- adversário ----------
   private onOppAim(from: string, a: AimMsg): void {
-    if (this.animating || from === this.profile.id || this.myTurn) return;
+    if (this.animating || from === this.you || this.myTurn) return;
     this.aim = { angle: a.angle, a: a.a, b: a.b, pull: a.pull };
     if (a.cx !== undefined && a.cy !== undefined) this.view.setCueBall(a.cx, a.cy);
     this.view.setAim(this.aim, false);
@@ -584,7 +620,7 @@ export class GameScreen {
     const ice = await getIceServers();
     if (this.done) return;
     this.rtc = new RtcMesh({
-      myId: this.profile.id,
+      myId: this.you,
       iceServers: ice,
       send: (to, data) => this.backend.rtc(to, data),
       onStream: (id, stream) => this.hud.setStream(id, stream, false),
@@ -601,7 +637,7 @@ export class GameScreen {
       toast(kind === 'cam' ? 'Não consegui usar a câmera. Verifique a permissão do navegador.' : 'Não consegui usar o microfone. Verifique a permissão do navegador.');
       return;
     }
-    this.hud.setStream(this.profile.id, this.rtc.camOn ? this.rtc.localVideo : null, true);
+    this.hud.setStream(this.you, this.rtc.camOn ? this.rtc.localVideo : null, true);
     this.hud.setMedia(this.rtc.camOn, this.rtc.micOn);
     this.backend.media(this.rtc.camOn, this.rtc.micOn);
   }
@@ -705,7 +741,7 @@ export class GameScreen {
       }
       saveStats(st);
     }
-    const isHost = v.hostId === this.profile.id;
+    const isHost = v.hostId === v.you;
     const seriesOver = v.bestOf === 1 || v.players.some((p) => p.wins > v.bestOf / 2) || !!v.result.forfeit;
     const rows = v.players.map((p) => h('div', { class: `res-row${p.seat === v.result!.winner ? ' win' : ''}` }, avatarEl(p.name, avatarColor(p.id), this.photos[p.id] ?? null, 'avatar'), h('span', { text: p.name }), h('b', { text: v.bestOf > 1 ? String(p.wins) : p.seat === v.result!.winner ? '🏆' : '' })));
     const actions: HTMLElement[] = [];

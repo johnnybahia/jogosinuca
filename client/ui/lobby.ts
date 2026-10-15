@@ -12,7 +12,6 @@ export class LobbyPanel {
 
   constructor(
     private backend: Backend,
-    private myId: string,
     private onLeave: () => void,
   ) {}
 
@@ -24,16 +23,17 @@ export class LobbyPanel {
   }
 
   render(v: RoomView, photos: Record<string, string>): void {
-    const isHost = v.hostId === this.myId;
+    const myId = v.you;
+    const isHost = v.hostId === myId;
     const slots = [0, 1].map((seat) => {
       const p = v.players.find((x) => x.seat === seat);
       if (!p) return h('div', { class: 'slot empty' }, h('div', { class: 'avatar initial', text: '?', style: { background: '#2a3038' } }), h('div', { class: 'slot-n muted', text: 'Aguardando jogador…' }));
       return h(
         'div',
-        { class: `slot${p.id === this.myId ? ' me' : ''}` },
+        { class: `slot${p.id === myId ? ' me' : ''}` },
         avatarEl(p.name, avatarColor(p.id), photos[p.id] ?? null, 'avatar'),
         h('div', { class: 'slot-t' }, h('div', { class: 'slot-n', text: p.name + (p.isHost ? ' · anfitrião' : '') }), h('div', { class: 'slot-s muted', text: p.bot ? `Bot ${BOT_LABEL[(p.botLevel ?? 'normal') as BotLevel]}` : p.connected ? 'Conectado' : 'Desconectado' })),
-        isHost && p.id !== this.myId ? btn('Remover', () => (p.bot ? this.backend.bot(false, 'normal') : this.backend.kick(p.id)), 'ghost small') : null,
+        isHost && p.id !== myId ? btn('Remover', () => (p.bot ? this.backend.bot(false, 'normal') : this.backend.kick(p.id)), 'ghost small') : null,
       );
     });
     const hasBot = v.players.some((p) => p.bot);

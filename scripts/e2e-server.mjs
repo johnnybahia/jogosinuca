@@ -55,6 +55,14 @@ await sleep(600);
 if (!c.errors.length) fail('terceiro jogador deveria ser recusado');
 log('terceiro recusado:', c.errors[0]);
 
+// 3b) privacidade: o id de verdade nunca aparece para os outros (ninguém consegue tomar o lugar de ninguém)
+for (const [cl, raw] of [[a, a.id], [b, b.id]]) {
+  const txt = JSON.stringify(cl.view);
+  if (txt.includes('player-aaaaaaaa') || txt.includes('player-bbbbbbbb')) fail('o estado da sala vazou o id real de um jogador');
+  if (cl.view.you === raw) fail('"you" deveria ser o id público');
+}
+log('ids públicos: o id real não vaza');
+
 // 4) só o anfitrião muda ajustes e inicia
 b.send({ t: 'settings', mode: 'par_impar' });
 await sleep(300);
@@ -67,7 +75,7 @@ log('partida iniciada; vez de', a.view.players.find((p) => p.seat === a.view.mat
 
 // 5) tacadas: quem não é da vez leva erro; da vez joga
 const turnSeat = () => a.view.match.turn;
-const whose = () => (a.view.players.find((p) => p.seat === turnSeat()).id === a.id ? a : b);
+const whose = () => (a.view.players.find((p) => p.seat === turnSeat()).id === a.view.you ? a : b);
 const other = () => (whose() === a ? b : a);
 const errN = other().errors.length;
 other().send({ t: 'shot', dx: 1, dy: 0, v: 3, a: 0, b: 0 });
@@ -113,7 +121,7 @@ await solo.until(() => solo.view.phase === 'playing', 5000, 'início contra bot'
 let tries = 0;
 while (solo.shots.length < 3 && tries++ < 40) {
   const m = solo.view.match;
-  const me = solo.view.players.find((p) => p.id === solo.id);
+  const me = solo.view.players.find((p) => p.id === solo.view.you);
   if (m.turn === me.seat && !solo.view.last?.over) {
     const n = solo.shots.length;
     solo.send({ t: 'shot', dx: 1, dy: 0.02, v: 3, a: 0, b: 0, cue: m.inHand !== 'none' ? { x: -0.4, y: 0 } : undefined });

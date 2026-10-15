@@ -262,3 +262,4 @@ input { font: inherit; }
 .pside { position: relative; }
 .pside.seat1 .emote-bubble { right: 0; }
 .hud.practice .pside.seat1 { visibility: hidden; }
+.power-hint { position: absolute; left: 12px; width: 34px; height: 4px; margin-top: -2px; background: #7dd3fc; border-radius: 2px; box-shadow: 0 0 10px #7dd3fc; display: none; pointer-events: none; }
