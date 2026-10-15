@@ -19,11 +19,11 @@ export class CameraRig {
   ty = 0;
   pitch = 0.5;
   dist = 1.05;
-  private cur = { x: 0, y: FELT_Y + BALL_R, z: 0, yaw: 0, pitch: 0.82, pEff: 0.82, dist: 1.4, fov: 42, topK: 0 };
+  private cur = { x: 0, y: FELT_Y + BALL_R, z: 0, yaw: 0, pitch: 0.5, pEff: 0.5, dist: 1.05, fov: 42, topK: 0 };
   private target = new THREE.Vector3();
   private t = 0;
-  userPitch = 0.82;
-  userDist = 1.4;
+  userPitch = 0.5;
+  userDist = 1.05;
   /** zoom da vista de cima (1 = mesa inteira) */
   topZoom = 1;
   aspect = 1;
@@ -118,8 +118,9 @@ export class CameraRig {
       const ux = Math.cos(sc.yaw);
       const uz = Math.sin(sc.yaw);
       const lim = (c: number, u: number, half: number): number => (Math.abs(u) < 1e-4 ? Infinity : u > 0 ? (half - c) / u : (-half - c) / u);
-      const tmax = Math.max(0.05, Math.min(lim(sc.x, ux, HL + 0.04), lim(sc.z, uz, HW + 0.04)));
-      if (tmax < Math.cos(sc.pitch) * sc.dist) pitchEff = Math.min(1.3, Math.max(sc.pitch, Math.acos(Math.min(1, tmax / sc.dist))));
+      const tn = Math.max(0.03, Math.min(lim(sc.x, ux, HL), lim(sc.z, uz, HW)));
+      // a madeira da tabela só atrapalha quando a bola está colada nela: sobe o suficiente para o olhar passar por cima
+      pitchEff = Math.min(1.2, Math.max(sc.pitch, Math.atan(0.1 / tn)));
     }
     sc.pEff = damp(sc.pEff, pitchEff, 8, dt);
     const cp = Math.cos(sc.pEff);

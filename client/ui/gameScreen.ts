@@ -489,7 +489,7 @@ export class GameScreen {
   private toggleZoom(): void {
     const c = this.view.cam;
     const close = c.userDist > 0.5;
-    c.userDist = close ? 0.3 : 1.4;
+    c.userDist = close ? 0.3 : 1.05;
     this.hud.setZoomOn(close);
     sndClick();
   }

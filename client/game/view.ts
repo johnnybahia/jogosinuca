@@ -441,7 +441,7 @@ export class PoolView {
     this.table.update(dt);
     if (!this.lampBottom) this.lampBottom = new THREE.Box3().setFromObject(this.table.lampGroup).min.y;
     // a luminária fica no caminho quando a câmera sobe: some enquanto a câmera estiver perto da altura dela
-    this.table.lampGroup.visible = this.lampOn && (this.cam.mode === 'menu' || this.cam.camera.position.y < this.lampBottom - 0.35);
+    this.table.lampGroup.visible = this.lampOn && (this.cam.mode === 'menu' || this.cam.camera.position.y < this.lampBottom - 0.15);
     this.cam.update(dt, this.sim && this.followCue ? this.followTarget() : undefined);
     this.onFrame?.(dt);
     if (this.post.enabled) this.post.render(dt, this.time);
