@@ -330,6 +330,7 @@ export class GameScreen {
       }
     }
     if (best && (announce || !Number.isFinite(this.aim.angle))) this.aim.angle = Math.atan2(best.y - c.y, best.x - c.x);
+    this.spinKeep = { a: 0, b: 0 };
     const sp = this.spinKeep;
     this.hud.setSpin(sp.a, sp.b);
     this.aim = { angle: this.aim.angle, a: sp.a, b: sp.b, pull: 0.05 };
