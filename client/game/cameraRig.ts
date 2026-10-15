@@ -19,11 +19,11 @@ export class CameraRig {
   ty = 0;
   pitch = 0.5;
   dist = 1.05;
-  private cur = { x: 0, y: FELT_Y + BALL_R, z: 0, yaw: 0, pitch: 0.5, pEff: 0.5, dist: 1.05, fov: 42, topK: 0 };
+  private cur = { x: 0, y: FELT_Y + BALL_R, z: 0, yaw: 0, pitch: 0.82, pEff: 0.82, dist: 1.4, fov: 42, topK: 0 };
   private target = new THREE.Vector3();
   private t = 0;
-  userPitch = 0.5;
-  userDist = 1.05;
+  userPitch = 0.82;
+  userDist = 1.4;
   /** zoom da vista de cima (1 = mesa inteira) */
   topZoom = 1;
   aspect = 1;
