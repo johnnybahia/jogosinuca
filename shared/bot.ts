@@ -225,6 +225,31 @@ export function botPlan(state: MatchState, level: BotLevel, rnd: Rnd = Math.rand
       chosen = { dx: c.dx, dy: c.dy, v: speedFor(c), a: 0, b: 0.1 };
     }
   }
+  if (!chosen && cfg.sims > 0 && tgt.length > 0) {
+    // sem tacada limpa: os níveis altos procuram, na física, uma jogada segura (toca primeiro na bola certa, sem falta)
+    const near = tgt
+      .map((id) => balls.find((b) => b.id === id && b.on)!)
+      .filter(Boolean)
+      .sort((a, b) => (a.x - cue.x) ** 2 + (a.y - cue.y) ** 2 - ((b.x - cue.x) ** 2 + (b.y - cue.y) ** 2))
+      .slice(0, 6);
+    let bestScore = -Infinity;
+    for (const t of near) {
+      const base = Math.atan2(t.y - cue.y, t.x - cue.x);
+      const dist = Math.sqrt((t.x - cue.x) ** 2 + (t.y - cue.y) ** 2);
+      const spread = Math.asin(Math.min(0.9, (BALL_D * 0.85) / Math.max(dist, BALL_D * 1.2)));
+      for (const off of [0, spread * 0.5, -spread * 0.5, spread * 0.9, -spread * 0.9]) {
+        for (const v of [1.5, 2.6]) {
+          const ang = base + off;
+          const shot: ShotParams = { dx: Math.cos(ang), dy: Math.sin(ang), v, a: 0, b: 0 };
+          const sc = evaluate({ ...state, balls }, me, shot, cue, cfg) - dist * 5;
+          if (sc > bestScore) {
+            bestScore = sc;
+            chosen = { dx: shot.dx, dy: shot.dy, v, a: 0, b: 0 };
+          }
+        }
+      }
+    }
+  }
   if (!chosen) {
     // sem tacada limpa: toca na bola legal mais acessível (ou escolhe qualquer uma)
     let bestId = -1;
