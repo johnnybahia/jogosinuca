@@ -326,6 +326,8 @@ export class GameScreen {
     this.hud.setEnabled(true);
     this.hud.setPower(0);
     this.hud.setPowerHint(null);
+    // a posição escolhida só vale enquanto a branca está na mão; fora disso manda o estado oficial
+    if (m.inHand === 'none') this.placed = null;
     const c = this.placed ?? m.balls.find((b) => b.id === 0)!;
     if (this.placed) this.view.setCueBall(this.placed.x, this.placed.y);
     // mira inicial: para a bola alvo mais próxima
@@ -442,6 +444,7 @@ export class GameScreen {
     const c = m.balls.find((b) => b.id === 0)!;
     const pos = this.view.getPositions().find((b) => b.id === 0) ?? c;
     this.phase = 'shooting';
+    this.placed = null;
     this.pendingShot = true;
     this.hud.setAimInfo('');
     this.hud.setEnabled(false);
