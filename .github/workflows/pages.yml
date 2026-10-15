@@ -1,7 +1,7 @@
 # Publica o jogo no GitHub Pages (https://<usuario>.github.io/<repositório>/) a cada push na main.
 # Serve para jogar offline contra o computador sem criar conta na Cloudflare. Para o online funcionar a partir daqui,
 # defina a variável do repositório SERVER_URL com o endereço do Worker (ex.: https://sinuca3d.SUA-CONTA.workers.dev).
-# Uma vez só: Settings → Pages → Build and deployment → Source: "GitHub Actions".
+# Uma vez só: Settings → Pages → Build and deployment → Source: "GitHub Actions" e criar a variável do repositório ENABLE_PAGES = true.
 name: Deploy to GitHub Pages
 
 on:
@@ -20,6 +20,7 @@ concurrency:
 
 jobs:
   build:
+    if: ${{ vars.ENABLE_PAGES == 'true' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -38,6 +39,7 @@ jobs:
 
   deploy:
     needs: build
+    if: ${{ vars.ENABLE_PAGES == 'true' }}
     runs-on: ubuntu-latest
     environment:
       name: github-pages

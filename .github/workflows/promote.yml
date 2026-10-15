@@ -1,0 +1,53 @@
+name: Merge automático na main
+# Todo push em claude/** (ou em qualquer branch listada abaixo) que passar nos testes entra na main sozinho e dispara o deploy.
+# Não depende de PR nem de configuração: usa o GITHUB_TOKEN com permissão de escrita só neste fluxo.
+# (Um push feito pelo GITHUB_TOKEN não dispara os outros workflows, por isso o deploy é chamado aqui por workflow_dispatch.)
+on:
+  push:
+    branches: ['claude/**']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  actions: write
+
+concurrency:
+  group: promote
+  cancel-in-progress: false
+
+jobs:
+  promote:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx tsc --noEmit
+      - run: npx tsc -p server/tsconfig.json
+      - run: npm test
+      - run: npx vite build
+      - name: Entrar na main
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git fetch origin main
+          if git merge-base --is-ancestor origin/main HEAD; then
+            git push origin HEAD:main
+          else
+            git checkout -B promote origin/main
+            git merge --no-edit "$GITHUB_SHA"
+            git push origin HEAD:main
+          fi
+      - name: Publicar (deploy)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh workflow run deploy.yml --ref main
+          if [ "${{ vars.ENABLE_PAGES }}" = "true" ]; then gh workflow run pages.yml --ref main; fi

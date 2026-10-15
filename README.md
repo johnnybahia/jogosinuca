@@ -35,11 +35,11 @@ Para testar offline/PWA: `npm run build` e abra o servidor do Worker (`npm run s
 3. `npm run deploy` — gera o build e publica. Ele imprime o endereço `https://sinuca3d.<sua-conta>.workers.dev`.
 4. Abra no celular, entre, e use "Instalar app" (Android/Chrome) ou Compartilhar → Adicionar à Tela de Início (iPhone).
 
-Pelo GitHub: crie os segredos `CLOUDFLARE_API_TOKEN` (modelo "Edit Cloudflare Workers") e `CLOUDFLARE_ACCOUNT_ID`; todo push na `main` testa e publica (`.github/workflows/deploy.yml`) e quem já tem o jogo vê o botão **Atualizar**. O `automerge.yml` liga o merge automático dos PRs (ative *Allow auto-merge* e marque o check `test` como obrigatório na regra da `main`).
+Pelo GitHub: crie os segredos `CLOUDFLARE_API_TOKEN` (modelo "Edit Cloudflare Workers") e `CLOUDFLARE_ACCOUNT_ID`; todo push na `main` testa e publica (`.github/workflows/deploy.yml`) e quem já tem o jogo vê o botão **Atualizar**. O `promote.yml` leva **todo push em `claude/**` que passar nos testes direto para a `main`** (e chama o deploy), sem PR. O `automerge.yml` liga o merge automático dos PRs (ative *Allow auto-merge* e marque o check `test` como obrigatório na regra da `main`).
 
 ### Sem conta na Cloudflare (só offline contra o computador)
 
-O `pages.yml` publica o jogo no GitHub Pages a cada push na `main` (Settings → Pages → Source: **GitHub Actions**). Para o online funcionar a partir de lá, defina a variável do repositório `SERVER_URL` com o endereço do Worker.
+O `pages.yml` publica o jogo no GitHub Pages a cada push na `main` quando a variável do repositório `ENABLE_PAGES` é `true` (Settings → Pages → Source: **GitHub Actions**). Para o online funcionar a partir de lá, defina a variável do repositório `SERVER_URL` com o endereço do Worker.
 
 ## Estrutura
 
