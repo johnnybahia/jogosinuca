@@ -64,6 +64,7 @@ export class Hud {
   private btnZoom!: HTMLButtonElement;
   private btnTable!: HTMLButtonElement;
   private aimInfo = h('div', { class: 'aim-info' });
+  private turnChip = h('div', { class: 'turn-chip' });
   private btnCam!: HTMLButtonElement;
   private btnMic!: HTMLButtonElement;
   private btnEmote!: HTMLButtonElement;
@@ -84,7 +85,7 @@ export class Hud {
       this.cards.push(card);
       this.trays.push(tray);
       top.append(h('div', { class: `pside seat${i}` }, card, tray));
-      if (i === 0) top.append(h('div', { class: 'pcenter' }, this.info, this.timer));
+      if (i === 0) top.append(h('div', { class: 'pcenter' }, this.info, this.turnChip, this.timer));
     }
     // botões de topo (à direita)
     const mk = (label: string, title: string, fn: () => void): HTMLButtonElement => h('button', { class: 'ibtn', text: label, attrs: { type: 'button', title, 'aria-label': title }, on: { click: fn } });
@@ -336,7 +337,13 @@ export class Hud {
     if (t && ms) this.hintT = window.setTimeout(() => this.hint.classList.remove('show'), ms);
   }
 
-  showBanner(title: string, sub = '', kind: 'good' | 'bad' | 'info' = 'info', ms = 2200): void {
+  /** Indicador fixo de quem joga. */
+  setTurn(text: string, mine: boolean): void {
+    this.turnChip.textContent = text;
+    this.turnChip.className = `turn-chip${text ? ' show' : ''}${mine ? ' mine' : ''}`;
+  }
+
+  showBanner(title: string, sub = '', kind: 'good' | 'bad' | 'info' | 'wait' = 'info', ms = 2200): void {
     this.banner.replaceChildren(h('div', { class: `banner-in ${kind}` }, h('div', { class: 'banner-t', text: title }), sub ? h('div', { class: 'banner-s', text: sub }) : null));
     this.banner.classList.remove('show');
     void this.banner.offsetWidth;

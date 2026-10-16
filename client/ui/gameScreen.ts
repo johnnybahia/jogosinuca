@@ -39,6 +39,10 @@ export class GameScreen {
   private phase: Phase = 'wait';
   private animating = false;
   private woodGame = 0;
+  private turnGame = '';
+  /** até quando o aviso do resultado da tacada fica na tela (o aviso de vez espera) */
+  private resultUntil = 0;
+  private turnToken = 0;
   private spinKeep = { a: 0, b: 0 };
   private aim: AimState = { angle: 0, a: 0, b: 0, pull: 0.05 };
   private placed: { x: number; y: number } | null = null;
@@ -236,6 +240,7 @@ export class GameScreen {
     this.lastSeq = v.shotSeq;
     this.pendingShot = false;
     if (v.phase === 'ended' || m.over) {
+      this.hud.setTurn('', false);
       this.turnKey = '';
       this.phase = 'wait';
       this.hud.setEnabled(false);
@@ -282,6 +287,8 @@ export class GameScreen {
     if (this.myTurn) {
       const first = !this.myTurnPrev;
       this.myTurnPrev = true;
+      this.hud.setTurn('Sua vez', true);
+      this.turnGame = String(v.gamesDone);
       if (m.inHand !== 'none') {
         this.phase = 'place';
         const c = m.balls.find((b) => b.id === 0)!;
@@ -294,13 +301,20 @@ export class GameScreen {
         this.view.setAim(null);
         if (first) {
           sndTurn();
-          this.hud.showBanner('Bola na mão', m.inHand === 'head' ? 'Posicione atrás da linha' : 'Posicione onde quiser', 'info');
+          this.announceTurn('Bola na mão', m.inHand === 'head' ? 'Posicione atrás da linha' : 'Posicione onde quiser', 'info', 1800);
         }
       } else {
         this.beginAim(first);
       }
     } else {
+      const wasMine = this.myTurnPrev;
       this.myTurnPrev = false;
+      const oppName = v.players.find((p) => p.seat === m.turn)?.name ?? 'adversário';
+      this.hud.setTurn(`Vez de ${oppName}`, false);
+      // avisa quando a vez passa para o adversário e no começo de cada partida (as tacadas seguidas dele não repetem o aviso)
+      const gameKey = String(v.gamesDone);
+      if (wasMine || this.turnGame !== gameKey) this.announceTurn(`Vez de ${oppName}`, m.inHand !== 'none' ? 'Bola na mão para ele' : 'Aguarde a jogada', 'wait', 1300);
+      this.turnGame = gameKey;
       this.phase = 'wait';
       this.hud.setPlacing(false);
       this.hud.setEnabled(false);
@@ -316,6 +330,17 @@ export class GameScreen {
       this.hud.setHint(opp ? `Vez de ${opp.name}…` : '');
     }
     this.hud.setButtons({ top: this.top, guide: loadPrefs().guide, muted: isMuted() });
+  }
+
+  /** Aviso de vez: espera o aviso do resultado da tacada terminar. */
+  private announceTurn(title: string, sub: string, kind: 'info' | 'wait', ms = 1500): void {
+    const token = ++this.turnToken;
+    const wait = Math.max(0, this.resultUntil - performance.now());
+    const show = (): void => {
+      if (token === this.turnToken) this.hud.showBanner(title, sub, kind, ms);
+    };
+    if (wait > 0) window.setTimeout(show, wait + 150);
+    else show();
   }
 
   private beginAim(announce: boolean): void {
@@ -354,7 +379,7 @@ export class GameScreen {
       sndTurn();
       const mode = MODES.find((x) => x.id === this.v!.mode);
       const g = m.groups[m.turn];
-      this.hud.showBanner('Sua vez', mode?.id === 'bola61' ? `Toque na bola ${[...targets(m)][0] ?? ''}` : g ? `Você joga com as ${groupName(g).toLowerCase()}` : 'Mesa aberta', 'info', 1500);
+      this.announceTurn('Sua vez', mode?.id === 'bola61' ? `Toque na bola ${[...targets(m)][0] ?? ''}` : g ? `Você joga com as ${groupName(g).toLowerCase()}` : 'Mesa aberta', 'info');
     }
     this.placed = null;
   }
@@ -616,24 +641,39 @@ export class GameScreen {
     this.animating = false;
     const out = e.out;
     const mine = e.by === this.mySeat;
-    const who = this.v?.players.find((p) => p.seat === e.by)?.name ?? '';
-    if (out.foul) {
+    const players = this.v?.players ?? [];
+    const who = players.find((p) => p.seat === e.by)?.name ?? '';
+    const other = players.find((p) => p.seat !== e.by)?.name ?? 'adversário';
+    const banner = (t: string, sub: string, kind: 'good' | 'bad' | 'info' | 'wait', ms: number): void => {
+      this.hud.showBanner(t, sub, kind, ms);
+      this.resultUntil = performance.now() + ms;
+    };
+    if (out.over) {
+      // fim de jogo: a mensagem diz quem ganhou, nunca "continue"
+      const iWon = out.winner === this.mySeat;
+      banner(out.message || (iWon ? 'Você venceu' : 'Fim de jogo'), out.reason ?? '', iWon ? 'good' : 'bad', 2400);
+      if (mine) this.streak = 0;
+    } else if (out.foul) {
       sndFoul();
       this.buzz([60, 40, 60]);
-      this.hud.showBanner('FALTA', `${who}: ${out.foul}`, 'bad', 2600);
+      banner('FALTA', `${who}: ${out.foul}`, 'bad', 2600);
       if (mine) this.streak = 0;
-    } else if (out.potted.length) {
-      this.hud.showBanner(out.potted.length > 1 ? `${out.potted.length} bolas!` : 'Caçapa!', mine ? 'Continue jogando' : `${who} continua`, mine ? 'good' : 'info', 1700);
+    } else if (out.potted.length && out.again) {
+      banner(out.potted.length > 1 ? `${out.potted.length} bolas!` : 'Caçapa!', mine ? 'Continue jogando' : `${who} continua`, mine ? 'good' : 'info', 1700);
       if (mine) this.buzz(35);
-      if (mine) {
-        this.streak += out.potted.length;
-        const st = loadStats();
-        st.potted += out.potted.length;
-        st.bestStreak = Math.max(st.bestStreak, this.streak);
-        saveStats(st);
-      }
+    } else if (out.potted.length) {
+      // derrubou, mas a vez passa (bola do adversário)
+      banner(mine ? 'Bola do adversário' : 'Bola sua', mine ? `Vez de ${other}` : 'Sua vez', mine ? 'info' : 'good', 1700);
+      if (mine) this.streak = 0;
     } else if (mine) {
       this.streak = 0;
+    }
+    if (mine && out.potted.length && out.again && !out.foul && !out.over) {
+      this.streak += out.potted.length;
+      const st = loadStats();
+      st.potted += out.potted.length;
+      st.bestStreak = Math.max(st.bestStreak, this.streak);
+      saveStats(st);
     }
     const next = this.deferred ?? this.v;
     this.deferred = null;
