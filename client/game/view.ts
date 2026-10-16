@@ -93,6 +93,7 @@ export class PoolView {
     scene.fog = new THREE.Fog(0x07090c, 6, 14);
     this.setupEnvironment();
     const hemi = new THREE.HemisphereLight(0xaab6d8, 0x3a2a1e, 0.55);
+    this.hemi = hemi;
     scene.add(hemi);
     const [table, balls, cue] = await Promise.all([buildTable(assets, this.qp, this.renderer), BallsView.create(assets), CueView.create(assets)]);
     this.table = table;
@@ -531,6 +532,16 @@ export class PoolView {
       const fh = this.sim.firstHit >= 0 ? this.sim.balls[this.sim.firstHit] : null;
       this.cam.frame = c0 && c0.on && fh && fh.on && Math.hypot(c0.x - fh.x, c0.y - fh.y) < 1.4 ? [{ x: c0.x, y: c0.y }, { x: fh.x, y: fh.y }] : null;
     }
+    // vista de cima / da mesa: sem a luminária, a cena fica escura; clareia suavemente
+    const wantTop = this.cam.mode === 'top' || (this.cam.mode === 'aim' && this.cam.overview) ? 1 : 0;
+    this.topLight += (wantTop - this.topLight) * Math.min(1, dt * 4);
+    if (Math.abs(this.topLight - wantTop) < 0.003) this.topLight = wantTop;
+    const k = this.topLight;
+    if (this.hemi) this.hemi.intensity = 0.55 + 1.05 * k;
+    this.scene.environmentIntensity = 0.55 + 0.75 * k;
+    this.renderer.toneMappingExposure = 1 + 0.3 * k;
+    for (const sp of this.table.spots) sp.intensity = 2.6 * (1 + 0.8 * k);
+    this.post.setBright(k);
     this.aimView.setScale(Math.min(3, Math.max(1.1, (this.cam.mode === 'top' ? 2 : this.cam.curDist) / 0.95)));
     this.cam.update(dt, this.sim && this.followCue ? this.followTarget() : undefined);
     this.onFrame?.(dt);
@@ -539,6 +550,9 @@ export class PoolView {
   }
   private followT = 0;
   private lampOn = true;
+  private hemi: THREE.HemisphereLight | null = null;
+  /** 0..1: quanto a luz de 'vista de cima' está ligada (situação atípica: mais clara, sem vinheta forte) */
+  private topLight = 0;
   private lampBottom = 0;
 
   dispose(): void {

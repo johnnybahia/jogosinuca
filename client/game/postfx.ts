@@ -67,6 +67,11 @@ export class PostFX {
     this.composer.setSize(w, h);
   }
 
+  /** 0..1: clareia a imagem (menos vinheta e mais contraste de luz) para a vista de cima. */
+  setBright(k: number): void {
+    this.grade.uniforms.uVignette!.value = 0.5 - 0.35 * k;
+  }
+
   flash(a: number): void {
     this.grade.uniforms.uFlash!.value = a;
   }
