@@ -531,6 +531,7 @@ export class PoolView {
       const fh = this.sim.firstHit >= 0 ? this.sim.balls[this.sim.firstHit] : null;
       this.cam.frame = c0 && c0.on && fh && fh.on && Math.hypot(c0.x - fh.x, c0.y - fh.y) < 1.4 ? [{ x: c0.x, y: c0.y }, { x: fh.x, y: fh.y }] : null;
     }
+    this.aimView.setScale(Math.min(3, Math.max(1.1, (this.cam.mode === 'top' ? 2 : this.cam.curDist) / 0.95)));
     this.cam.update(dt, this.sim && this.followCue ? this.followTarget() : undefined);
     this.onFrame?.(dt);
     if (this.post.enabled) this.post.render(dt, this.time);

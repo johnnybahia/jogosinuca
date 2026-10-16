@@ -33,6 +33,10 @@ export class CameraRig {
   /** pontos (plano da física) que precisam caber na tela: branca, bola alvo, caçapa */
   frame: { x: number; y: number }[] | null = null;
   private fit = new THREE.PerspectiveCamera(42, 1, 0.03, 40);
+  /** distância atual da câmera (para escalar as linhas de mira) */
+  get curDist(): number {
+    return this.cur.dist;
+  }
   private fitV = new THREE.Vector3();
   aspect = 1;
   private shake = 0;

@@ -110,6 +110,9 @@ function dashTexture(): THREE.CanvasTexture {
 
 class Ribbon {
   mesh: THREE.Mesh;
+  /** faixa escura embaixo: contraste sobre o pano verde */
+  edge: THREE.Mesh;
+  k = 1;
   private tex: THREE.CanvasTexture | null;
   constructor(color: number, opacity: number, private width: number, dashed: boolean, base: THREE.CanvasTexture) {
     const geo = new THREE.PlaneGeometry(1, 1).rotateX(-Math.PI / 2);
@@ -117,8 +120,18 @@ class Ribbon {
     if (this.tex) this.tex.needsUpdate = true;
     const mat = new THREE.MeshBasicMaterial({ color, transparent: true, opacity, depthWrite: false, map: this.tex, polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -4 });
     this.mesh = new THREE.Mesh(geo, mat);
-    this.mesh.renderOrder = 4;
+    this.mesh.renderOrder = 5;
     this.mesh.visible = false;
+    this.edge = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ color: 0x03140a, transparent: true, opacity: 0.55, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -3, polygonOffsetUnits: -3 }));
+    this.edge.renderOrder = 4;
+    this.edge.visible = false;
+    this.mesh.add(this.edge);
+    this.edge.scale.set(1, 1, 2.6);
+    this.edge.position.y = -0.0001;
+  }
+  setK(k: number): void {
+    this.k = k;
+    if (this.mesh.visible) this.mesh.scale.z = this.width * k;
   }
   set(x1: number, y1: number, x2: number, y2: number): void {
     const dx = x2 - x1;
@@ -129,9 +142,10 @@ class Ribbon {
       return;
     }
     this.mesh.visible = true;
+    this.edge.visible = true;
     this.mesh.position.set((x1 + x2) / 2, FELT_Y + 0.0012, -(y1 + y2) / 2);
     this.mesh.rotation.y = Math.atan2(dy, dx);
-    this.mesh.scale.set(len, 1, this.width);
+    this.mesh.scale.set(len, 1, this.width * this.k);
     if (this.tex) this.tex.repeat.x = len / 0.02;
   }
 }
@@ -151,27 +165,32 @@ export class AimView {
 
   constructor() {
     const dash = dashTexture();
-    this.main = new Ribbon(0xffffff, 0.85, 0.0034, false, dash);
-    this.obj = new Ribbon(0xffe27a, 0.9, 0.0034, true, dash);
-    this.cue = new Ribbon(0xcfe8ff, 0.6, 0.0028, true, dash);
-    this.pocket = new Ribbon(0x5df08a, 0.85, 0.0034, true, dash);
+    this.main = new Ribbon(0xffffff, 1, 0.0078, false, dash);
+    this.obj = new Ribbon(0xffe27a, 1, 0.0078, true, dash);
+    this.cue = new Ribbon(0xcfe8ff, 1, 0.0066, true, dash);
+    this.pocket = new Ribbon(0x5df08a, 1, 0.0078, true, dash);
     this.pocketRing = new THREE.Mesh(new THREE.RingGeometry(BALL_R * 0.55, BALL_R * 0.75, 40).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ color: 0x5df08a, transparent: true, opacity: 0.9, depthWrite: false }));
     this.pocketRing.renderOrder = 4;
     this.pocketRing.visible = false;
-    const ringGeo = new THREE.RingGeometry(BALL_R * 0.93, BALL_R, 56).rotateX(-Math.PI / 2);
-    this.ring = new THREE.Mesh(ringGeo, new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.9, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -4 }));
+    const ringGeo = new THREE.RingGeometry(BALL_R * 0.84, BALL_R * 1.02, 56).rotateX(-Math.PI / 2);
+    this.ring = new THREE.Mesh(ringGeo, new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 1, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -4 }));
     this.ring.renderOrder = 4;
-    this.ghost = new THREE.Mesh(new THREE.CircleGeometry(BALL_R * 0.93, 40).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.12, depthWrite: false }));
+    this.ghost = new THREE.Mesh(new THREE.CircleGeometry(BALL_R * 0.93, 40).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.22, depthWrite: false }));
     this.ghost.renderOrder = 3;
-    this.objRing = new THREE.Mesh(new THREE.RingGeometry(BALL_R * 1.08, BALL_R * 1.2, 48).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ color: 0xffe27a, transparent: true, opacity: 0.8, depthWrite: false }));
+    this.objRing = new THREE.Mesh(new THREE.RingGeometry(BALL_R * 1.05, BALL_R * 1.28, 48).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ color: 0xffe27a, transparent: true, opacity: 1, depthWrite: false }));
     this.objRing.renderOrder = 4;
     for (let i = 0; i < 24; i++) {
-      const r = new Ribbon(0xcfe8ff, 0.7, 0.0028, true, dash);
+      const r = new Ribbon(0xcfe8ff, 1, 0.0066, true, dash);
       this.path.push(r);
       this.group.add(r.mesh);
     }
     this.group.add(this.main.mesh, this.obj.mesh, this.cue.mesh, this.pocket.mesh, this.pocketRing, this.ring, this.ghost, this.objRing);
     this.group.visible = false;
+  }
+
+  /** Linhas mais grossas quando a câmera está longe, para continuarem visíveis. */
+  setScale(k: number): void {
+    for (const r of [this.main, this.obj, this.cue, this.pocket, ...this.path]) r.setK(k);
   }
 
   /** `from` é a posição da branca (plano da física). */
