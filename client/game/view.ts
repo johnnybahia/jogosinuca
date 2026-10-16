@@ -232,7 +232,7 @@ export class PoolView {
     this.refreshAim();
   }
 
-  guideFull = true;
+  guideFull = false;
   onAimInfo: ((t: string) => void) | null = null;
 
   setGuideFull(on: boolean): void {
@@ -306,7 +306,7 @@ export class PoolView {
         if (pk && pk.index >= 0) pts.push({ x: pk.x, y: pk.y });
       } else pts.push({ x: info.ghostX, y: info.ghostY });
       this.cam.frame = pts;
-      this.onAimInfo?.(obj ? `Corte ${Math.round(cutAngle(info, dx, dy))}°${pk && pk.index >= 0 ? (pk.quality === 'ok' ? ' · caçapa ✓' : pk.quality === 'tight' ? ' · caçapa apertada' : ' · caçapa fora') : ''}` : '');
+      this.onAimInfo?.(this.guideFull && obj ? `Corte ${Math.round(cutAngle(info, dx, dy))}°${pk && pk.index >= 0 ? (pk.quality === 'ok' ? ' · caçapa ✓' : pk.quality === 'tight' ? ' · caçapa apertada' : ' · caçapa fora') : ''}` : '');
     } else {
       this.aimView.hide();
       this.cam.frame = null;

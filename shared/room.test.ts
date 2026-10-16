@@ -51,3 +51,23 @@ describe('sala', () => {
     expect(core.player(core.d.result!.winner)!.id).toBe('a');
   });
 });
+
+describe('mira completa', () => {
+  it('vale para a sala se um dos humanos ligar; bloqueada com bot Difícil/Mestre', () => {
+    const core = new RoomCore(newRoom('ABCDE', {}));
+    core.join('u1', 'Ana');
+    core.join('u2', 'Beto');
+    expect(core.view('u1', 0, () => true).assist).toBe(false);
+    expect(core.view('u2', 0, () => true, {}, (x) => x, { u1: true }).assist).toBe(true);
+    expect(core.assistBlocked()).toBe(false);
+    const solo = new RoomCore(newRoom('ABCDF', {}));
+    solo.join('u1', 'Ana');
+    solo.setBot('u1', true, 'mestre');
+    expect(solo.assistBlocked()).toBe(true);
+    expect(solo.view('u1', 0, () => true, {}, (x) => x, { u1: true }).assist).toBe(false);
+    const facil = new RoomCore(newRoom('ABCDG', {}));
+    facil.join('u1', 'Ana');
+    facil.setBot('u1', true, 'normal');
+    expect(facil.view('u1', 0, () => true, {}, (x) => x, { u1: true }).assist).toBe(true);
+  });
+});

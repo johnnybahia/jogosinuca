@@ -104,10 +104,16 @@ export class RoomCore {
     return this.d.match ? this.player(this.d.match.turn) : undefined;
   }
 
-  view(forId: string, now: number, connected: (id: string) => boolean, media: Record<string, { cam: boolean; mic: boolean }> = {}, pub: (id: string) => string = (x) => x): RoomView {
+  /** Mira completa proibida: sala com bot Difícil ou Mestre. */
+  assistBlocked(): boolean {
+    return this.d.players.some((p) => p.bot && (p.botLevel === 'dificil' || p.botLevel === 'mestre'));
+  }
+
+  view(forId: string, now: number, connected: (id: string) => boolean, media: Record<string, { cam: boolean; mic: boolean }> = {}, pub: (id: string) => string = (x) => x, assist: Record<string, boolean> = {}): RoomView {
     const d = this.d;
-    const players: RoomPlayer[] = d.players.map((p) => ({ id: pub(p.id), name: p.name, seat: p.seat, connected: p.bot || connected(p.id), isHost: p.id === d.hostId, bot: p.bot, botLevel: p.botLevel, left: p.left, wins: p.wins, title: p.title, cam: !!media[p.id]?.cam, mic: !!media[p.id]?.mic }));
-    return { t: 'state', code: d.code, phase: d.phase, hostId: pub(d.hostId), mode: d.mode, turnSeconds: d.turnSeconds, bestOf: d.bestOf, isPublic: d.isPublic, you: pub(forId), players, match: d.match, shotSeq: d.shotSeq, turnEndsAt: d.turnEndsAt, serverNow: now, gamesDone: d.gamesDone, practice: d.practice, result: d.result, last: d.last };
+    const players: RoomPlayer[] = d.players.map((p) => ({ id: pub(p.id), name: p.name, seat: p.seat, connected: p.bot || connected(p.id), isHost: p.id === d.hostId, bot: p.bot, botLevel: p.botLevel, left: p.left, wins: p.wins, title: p.title, cam: !!media[p.id]?.cam, mic: !!media[p.id]?.mic, assist: !!assist[p.id] }));
+    const assistOn = !this.assistBlocked() && d.players.some((p) => !p.bot && !!assist[p.id]);
+    return { t: 'state', assist: assistOn, code: d.code, phase: d.phase, hostId: pub(d.hostId), mode: d.mode, turnSeconds: d.turnSeconds, bestOf: d.bestOf, isPublic: d.isPublic, you: pub(forId), players, match: d.match, shotSeq: d.shotSeq, turnEndsAt: d.turnEndsAt, serverNow: now, gamesDone: d.gamesDone, practice: d.practice, result: d.result, last: d.last };
   }
 
   // ---------- saguão

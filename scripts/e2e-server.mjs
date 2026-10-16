@@ -8,7 +8,7 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 class Client {
   constructor(code, id, name) {
-    this.id = id; this.name = name; this.view = null; this.shots = []; this.errors = []; this.msgs = [];
+    this.id = id; this.name = name; this.view = null; this.shots = []; this.errors = []; this.msgs = []; this.notices = [];
     this.ws = new WebSocket(`${WS}/ws/${code}`);
     this.ready = new Promise((res) => { this.ws.onopen = () => { this.ws.send(JSON.stringify({ t: 'join', id, name })); res(); }; });
     this.ws.onmessage = (e) => {
@@ -17,6 +17,7 @@ class Client {
       if (m.t === 'state') this.view = m;
       else if (m.t === 'shot') this.shots.push(m);
       else if (m.t === 'error') this.errors.push(m.msg);
+      else if (m.t === 'notice') this.notices.push(m.text);
     };
   }
   send(m) { this.ws.send(JSON.stringify(m)); }
@@ -109,6 +110,15 @@ await b2.ready;
 await b2.until(() => b2.view && b2.view.phase === 'playing' && b2.view.shotSeq === bSeq, 8000, 'reconexão com estado');
 log('reconexão ok (estado restaurado)');
 
+// 6b) mira completa: um liga, vale para os dois e os dois são avisados; desligar também
+if (a.view.assist || b2.view.assist) fail('mira completa deveria começar desligada');
+a.send({ t: 'assist', on: true });
+await a.until(() => a.view.assist === true && b2.view.assist === true, 5000, 'mira completa ligada para os dois');
+await b2.until(() => b2.notices.some((t) => t.includes('mira completa')), 5000, 'aviso ao adversário');
+a.send({ t: 'assist', on: false });
+await a.until(() => a.view.assist === false && b2.view.assist === false, 5000, 'mira completa desligada para os dois');
+log('mira completa: ligar vale para os dois (com aviso) e desligar também');
+
 // 7) bot: sala nova com bot
 const r2 = await api('/api/rooms', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ mode: 'bola61', turnSeconds: 0 }) });
 const solo = new Client(r2.code, 'player-dddddddd-0004', 'Duda');
@@ -130,6 +140,18 @@ while (solo.shots.length < 3 && tries++ < 40) {
 }
 await solo.until(() => solo.shots.some((s) => solo.view.players.find((p) => p.seat === s.by)?.bot), 30000, 'jogada do bot');
 log('bot jogou sozinho (alarme do servidor funcionando)');
+
+// 7b) contra bot Difícil/Mestre a mira completa é proibida
+const rDif = await api('/api/rooms', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ mode: 'bola61', turnSeconds: 0 }) });
+const dif = new Client(rDif.code, 'player-eeeeeeee-0005', 'Edu');
+await dif.ready;
+await dif.until(() => dif.view?.players.length === 1, 5000, 'Edu no saguão');
+dif.send({ t: 'bot', on: true, level: 'dificil' });
+await dif.until(() => dif.view.players.length === 2, 5000, 'bot difícil na sala');
+dif.send({ t: 'assist', on: true });
+await dif.until(() => dif.errors.some((e) => e.includes('Difícil')), 5000, 'recusa da mira completa contra bot difícil');
+if (dif.view.assist) fail('mira completa não pode ligar contra bot difícil');
+log('mira completa recusada contra bot Difícil');
 
 // 8) ranking acessível e nome reservado
 const rk = await api('/api/ranking');

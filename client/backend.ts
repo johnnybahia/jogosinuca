@@ -27,6 +27,8 @@ export interface Backend {
   bot(on: boolean, level: BotLevel): void;
   kick(id: string): void;
   media(cam: boolean, mic: boolean): void;
+  /** pede/retira a mira completa (online: vale para os dois jogadores) */
+  assist(on: boolean): void;
   rtc(to: string, data: unknown): void;
   emote(n: number): void;
   leave(): void;

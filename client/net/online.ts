@@ -121,6 +121,9 @@ export class OnlineBackend implements Backend {
   media(cam: boolean, mic: boolean): void {
     this.send({ t: 'media', cam, mic });
   }
+  assist(on: boolean): void {
+    this.send({ t: 'assist', on });
+  }
   rtc(to: string, data: unknown): void {
     this.send({ t: 'rtc', to, data });
   }

@@ -32,6 +32,8 @@ export class GameRoom implements DurableObject {
   private photos: Record<string, string> = {};
   /** câmera/microfone de cada jogador (só em memória: a mídia acaba junto com a conexão) */
   private media: Record<string, { cam: boolean; mic: boolean }> = {};
+  /** quem pediu a mira completa (em memória; o cliente reenvia ao reconectar) */
+  private assist: Record<string, boolean> = {};
   private loaded: Promise<void>;
 
   constructor(
@@ -81,9 +83,13 @@ export class GameRoom implements DurableObject {
     this.send(ws, { t: 'error', msg });
   }
 
+  private anyAssist(): boolean {
+    return !this.core!.assistBlocked() && this.core!.d.players.some((p) => !p.bot && !!this.assist[p.id]);
+  }
+
   private view(forId: string): RoomView {
     const on = this.online();
-    return this.core!.view(forId, Date.now(), (id) => on.has(id), this.media, (id) => this.pub(id));
+    return this.core!.view(forId, Date.now(), (id) => on.has(id), this.media, (id) => this.pub(id), this.assist);
   }
 
   private broadcast(): void {
@@ -307,6 +313,22 @@ export class GameRoom implements DurableObject {
         this.broadcast();
         return;
       }
+      case 'assist': {
+        if (core.assistBlocked()) {
+          this.err(ws, 'Mira completa indisponível contra bot Difícil ou Mestre.');
+          return;
+        }
+        const was = this.anyAssist();
+        this.assist[me] = !!msg.on;
+        const now = this.anyAssist();
+        if (now !== was) {
+          const name = core.d.players.find((p) => p.id === me)?.name ?? 'Um jogador';
+          const text = now ? `${name} ativou a mira completa. Ela foi ativada para os dois jogadores.` : 'Mira completa desativada para os dois jogadores.';
+          for (const [, o] of this.online()) this.send(o, { t: 'notice', text });
+        }
+        this.broadcast();
+        return;
+      }
       case 'rtc': {
         // sinalização do vídeo ao vivo: só repassa para o destinatário
         const target = this.online().get(this.resolve(msg.to) ?? '');
@@ -384,6 +406,7 @@ export class GameRoom implements DurableObject {
   private async onDisconnect(id: string): Promise<void> {
     const s = this.s!;
     delete this.media[id];
+    delete this.assist[id];
     const p = s.d.players.find((x) => x.id === id);
     if (!p || p.bot) return;
     const hasOther = [...this.online().keys()].some((x) => x !== id);

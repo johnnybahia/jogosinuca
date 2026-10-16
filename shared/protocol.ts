@@ -37,6 +37,8 @@ export interface RoomPlayer {
   /** câmera e microfone ligados (vídeo ao vivo entre os jogadores) */
   cam: boolean;
   mic: boolean;
+  /** quer a mira completa (linha até a caçapa, trajetória da branca e ângulo de corte) */
+  assist?: boolean;
 }
 
 export interface MatchResult {
@@ -56,6 +58,8 @@ export interface RoomView {
   bestOf: BestOf;
   isPublic: boolean;
   you: string;
+  /** mira completa ligada para a sala: vale para os dois assim que um deles ativa (nunca contra bot Difícil/Mestre) */
+  assist: boolean;
   players: RoomPlayer[];
   match: MatchState | null;
   /** número de tacadas já resolvidas (reconexão: quem já viu essa não repete a animação) */
@@ -96,6 +100,7 @@ export type ClientMsg =
   | { t: 'kick'; id: string }
   | { t: 'bot'; on: boolean; level: BotLevel }
   | { t: 'media'; cam: boolean; mic: boolean }
+  | { t: 'assist'; on: boolean }
   | { t: 'rtc'; to: string; data: unknown }
   | { t: 'emote'; n: number }
   | { t: 'leave' }

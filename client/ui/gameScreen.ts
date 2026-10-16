@@ -38,6 +38,46 @@ export class GameScreen {
   private photos: Record<string, string> = {};
   private phase: Phase = 'wait';
   private animating = false;
+  /** Mira completa (linha até a caçapa, trajetória da branca e ângulo): bloqueada contra bot Difícil/Mestre; online vale para os dois quando um ativa. */
+  private assistBlocked(): boolean {
+    return !!this.v?.players.some((p) => p.bot && (p.botLevel === 'dificil' || p.botLevel === 'mestre'));
+  }
+  private assistOn(): boolean {
+    if (this.assistBlocked()) return false;
+    return this.backend.mode === 'online' && this.v ? this.v.assist : loadPrefs().assist;
+  }
+  private assistNote(): string {
+    if (this.assistBlocked()) return 'Mira completa indisponível contra bot Difícil ou Mestre.';
+    if (this.backend.mode === 'online' && this.v?.assist && !loadPrefs().assist) return 'Ligada pelo adversário: vale para os dois jogadores.';
+    if (this.backend.mode === 'online' && loadPrefs().assist) return 'Ligada para os dois jogadores (avisamos o adversário).';
+    return '';
+  }
+  private assistSent: boolean | null = null;
+  private refreshAssist(): void {
+    this.view.setGuideFull(this.assistOn());
+    // online: informa o servidor a preferência (e de novo ao reconectar)
+    if (this.backend.mode === 'online' && this.v && this.v.phase !== 'lobby') {
+      const want = loadPrefs().assist && !this.assistBlocked();
+      const me = this.v.players.find((p) => p.id === this.v!.you);
+      if (me && !!me.assist !== want && this.assistSent !== want) {
+        this.assistSent = want;
+        this.backend.assist(want);
+      } else if (me && !!me.assist === want) this.assistSent = null;
+    }
+  }
+  private setAssist(on: boolean): void {
+    if (on && this.assistBlocked()) {
+      toast('Mira completa indisponível contra bot Difícil ou Mestre.');
+      this.overlay?.close();
+      return;
+    }
+    savePrefs({ ...loadPrefs(), assist: on });
+    this.assistSent = null;
+    if (this.backend.mode === 'online') this.backend.assist(on);
+    this.refreshAssist();
+    this.view.setGuideFull(this.assistOn());
+  }
+
   /** vista de cima escolhida pelo jogador: a câmera fica fixa (inclusive na tacada e na vez do adversário) */
   private topLock = false;
   private topOff = 0;
@@ -111,7 +151,7 @@ export class GameScreen {
     window.addEventListener('resize', this.onResize);
     this.view.onFrame = (dt) => this.frame(dt);
     this.view.setFelt(loadPrefs().felt);
-    this.view.setGuideFull(loadPrefs().guideFull);
+    this.refreshAssist();
     this.view.onAimInfo = (t) => this.hud.setAimInfo(this.phase === 'aim' ? t : '');
     this.applyWood();
     this.hud.setButtons({ top: false, guide: loadPrefs().guide, muted: isMuted() });
@@ -207,6 +247,7 @@ export class GameScreen {
   private apply(v: RoomView, afterShot: boolean): void {
     const prevSeq = this.lastSeq;
     this.v = v;
+    this.refreshAssist();
     if (this.lobby) {
       if (v.phase === 'lobby') {
         if (!this.lobby.el.isConnected) this.o.root.append(this.lobby.el);
@@ -827,10 +868,8 @@ export class GameScreen {
         savePrefs({ ...loadPrefs(), felt: id });
         this.view.setFelt(id);
       })),
-      h('div', { class: 'setting' }, h('span', { text: 'Linha de mira' }), segmented([{ value: 'full', label: 'Completa' }, { value: 'first', label: 'Só contato' }], p.guideFull ? 'full' : 'first', (id) => {
-        savePrefs({ ...loadPrefs(), guideFull: id === 'full' });
-        this.view.setGuideFull(id === 'full');
-      })),
+      h('div', { class: 'setting' }, h('span', { text: 'Linha de mira' }), segmented([{ value: 'first', label: 'Só contato' }, { value: 'full', label: 'Completa' }], this.assistOn() ? 'full' : 'first', (id) => this.setAssist(id === 'full'))),
+      this.assistNote() ? h('div', { class: 'hint-line', text: this.assistNote() }) : null,
       h('div', { class: 'setting' }, h('span', { text: 'Madeira da mesa' }), segmented([{ value: 'aleatoria', label: 'Aleatória' }, { value: 'classica', label: 'Clássica' }, { value: 'mogno', label: 'Mogno' }, { value: 'pacote', label: 'Pacote' }], p.wood, (id) => {
         savePrefs({ ...loadPrefs(), wood: id });
         this.applyWood();

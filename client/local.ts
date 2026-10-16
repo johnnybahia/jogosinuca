@@ -141,6 +141,7 @@ export class LocalBackend implements Backend {
   bot(): void {}
   kick(): void {}
   media(): void {}
+  assist(): void {}
   rtc(): void {}
   emote(): void {}
   leave(): void {
