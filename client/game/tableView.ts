@@ -31,8 +31,6 @@ export interface TableParts {
   setTable(id: string): void;
   setProfile(p: QualityProfile): void;
   cones: THREE.Mesh[];
-  /** poeira flutuando na luz (só nas qualidades média/alta) */
-  dust: THREE.Points;
   update(dt: number): void;
 }
 
@@ -266,7 +264,7 @@ export async function buildTable(assets: Assets, qp: QualityProfile, renderer: T
 
   const cones: THREE.Mesh[] = [];
 
-  // brilho dos abajures (sprite aditivo) e poeira na luz
+  // brilho dos abajures (sprite aditivo)
   const glowTex = (() => {
     const c = document.createElement('canvas');
     c.width = c.height = 128;
@@ -290,41 +288,9 @@ export async function buildTable(assets: Assets, qp: QualityProfile, renderer: T
     outer.add(sp);
     glows.push(sp);
   }
-  const DUST = 140;
-  const dpos = new Float32Array(DUST * 3);
-  const dseed = new Float32Array(DUST * 3);
-  for (let i = 0; i < DUST; i++) {
-    const b = bulbPos[i % bulbPos.length]!;
-    const a = Math.random() * Math.PI * 2;
-    const r = Math.sqrt(Math.random()) * 0.55;
-    dpos[i * 3] = b.x + Math.cos(a) * r;
-    dpos[i * 3 + 1] = FELT_Y + 0.15 + Math.random() * (b.y - FELT_Y - 0.25);
-    dpos[i * 3 + 2] = b.z + Math.sin(a) * r;
-    dseed[i * 3] = Math.random() * 6.28;
-    dseed[i * 3 + 1] = 0.01 + Math.random() * 0.02;
-    dseed[i * 3 + 2] = Math.random() * 6.28;
-  }
-  const dgeo = new THREE.BufferGeometry();
-  dgeo.setAttribute('position', new THREE.BufferAttribute(dpos, 3));
-  const dust = new THREE.Points(dgeo, new THREE.PointsMaterial({ map: glowTex, size: 0.016, sizeAttenuation: true, transparent: true, opacity: 0.28, depthWrite: false, blending: THREE.AdditiveBlending, color: 0xffe9c4 }));
-  dust.frustumCulled = false;
-  outer.add(dust);
-  let dt0 = 0;
-  const update = (dt: number): void => {
-    if (!dust.visible) return;
-    dt0 += dt;
-    const arr = dgeo.attributes.position!.array as Float32Array;
-    for (let i = 0; i < DUST; i++) {
-      arr[i * 3] += Math.sin(dt0 * 0.3 + dseed[i * 3]!) * dt * 0.012;
-      arr[i * 3 + 1] -= dseed[i * 3 + 1]! * dt * 0.5;
-      arr[i * 3 + 2] += Math.cos(dt0 * 0.27 + dseed[i * 3 + 2]!) * dt * 0.012;
-      if (arr[i * 3 + 1]! < FELT_Y + 0.1) arr[i * 3 + 1] = bulbPos[i % bulbPos.length]!.y - 0.15;
-    }
-    dgeo.attributes.position!.needsUpdate = true;
-  };
+  const update = (_dt: number): void => {};
 
   const setProfile = (p: QualityProfile): void => {
-    dust.visible = p.shadowLights > 0;
     glows.forEach((g) => (g.visible = p.bloom));
     spots.forEach((s, i) => {
       const on = i < p.shadowLights || (p.shadowLights === 1 && i === 1);
@@ -358,7 +324,7 @@ export async function buildTable(assets: Assets, qp: QualityProfile, renderer: T
   setFelt(FELTS[0]!);
   setProfile(qp);
 
-  return { group: outer, felt, cushions, frame, lampGroup, spots, bulbs, floor, setFelt, setWood, setTable, setProfile, cones, dust, update };
+  return { group: outer, felt, cushions, frame, lampGroup, spots, bulbs, floor, setFelt, setWood, setTable, setProfile, cones, update };
 }
 
 /** Papel de parede escuro com lambri de madeira na parte de baixo (feito em canvas, sem arquivo). */
