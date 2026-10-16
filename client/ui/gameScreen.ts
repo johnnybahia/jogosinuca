@@ -1,5 +1,6 @@
+import { aimTrace } from '../../shared/aim';
 import { botPlan } from '../../shared/bot';
-import { MAX_SPEED, MIN_SPEED, powerToSpeed, type BallPos, type SimEvent } from '../../shared/physics';
+import { MAX_SPEED, MIN_SPEED, powerToSpeed, type SimEvent } from '../../shared/physics';
 import { avatarEl, btn, h, modal, toast, segmented } from './dom';
 import { Hud } from './hud';
 import type { Backend } from '../backend';
@@ -367,7 +368,8 @@ export class GameScreen {
       this.view.setCameraMode(this.topLock ? 'top' : 'aim');
       const opp = v.players.find((p) => p.seat === m.turn);
       const c = m.balls.find((b) => b.id === 0)!;
-      this.aim = { angle: this.aim.angle, a: 0, b: 0, pull: 0.1 };
+      const oppAng = this.bestTargetAngle(m, c);
+      this.aim = { angle: oppAng ?? this.aim.angle, a: 0, b: 0, pull: 0.1 };
       this.view.setAim(this.aim, false);
       this.view.cam.aimAngle = this.aim.angle;
       this.view.cam.tx = c.x;
@@ -388,6 +390,24 @@ export class GameScreen {
     else show();
   }
 
+  /** Ângulo da branca até a melhor bola legal do jogador da vez: mais perto, e de preferência com caminho livre. */
+  private bestTargetAngle(m: MatchState, c: { x: number; y: number }): number | null {
+    let best: number | null = null;
+    let score = Infinity;
+    for (const id of targets(m)) {
+      const t = m.balls.find((b) => b.id === id);
+      if (!t || !t.on) continue;
+      const ang = Math.atan2(t.y - c.y, t.x - c.x);
+      const tr = aimTrace(m.balls, c.x, c.y, Math.cos(ang), Math.sin(ang));
+      const sc = Math.hypot(t.x - c.x, t.y - c.y) + (tr.hit === id ? 0 : 1.2);
+      if (sc < score) {
+        score = sc;
+        best = ang;
+      }
+    }
+    return best;
+  }
+
   private beginAim(announce: boolean): void {
     const m = this.match!;
     this.phase = 'aim';
@@ -400,18 +420,10 @@ export class GameScreen {
     if (m.inHand === 'none') this.placed = null;
     const c = this.placed ?? m.balls.find((b) => b.id === 0)!;
     if (this.placed) this.view.setCueBall(this.placed.x, this.placed.y);
-    // mira inicial: para a bola alvo mais próxima
-    const tg = targets(m).map((id) => m.balls.find((b) => b.id === id)!).filter(Boolean);
-    let best: BallPos | null = null;
-    let bd = Infinity;
-    for (const b of tg) {
-      const d = (b.x - c.x) ** 2 + (b.y - c.y) ** 2;
-      if (d < bd) {
-        bd = d;
-        best = b;
-      }
-    }
-    if (best && (announce || !Number.isFinite(this.aim.angle))) this.aim.angle = Math.atan2(best.y - c.y, best.x - c.x);
+    // a mira volta apontando para uma bola do jogador da vez (a mais próxima e com caminho livre)
+    const ang = this.bestTargetAngle(m, c);
+    if (ang !== null) this.aim.angle = ang;
+    else if (!Number.isFinite(this.aim.angle)) this.aim.angle = 0;
     this.spinKeep = { a: 0, b: 0 };
     const sp = this.spinKeep;
     this.hud.setSpin(sp.a, sp.b);
@@ -660,7 +672,14 @@ export class GameScreen {
     this.view.setAim(this.aim, false);
   }
 
+  /** tacadas que chegaram com outra ainda rolando (aparelho lento): tocam uma depois da outra */
+  private shotQueue: ShotEvent[] = [];
+
   private onShot(e: ShotEvent): void {
+    if (this.animating) {
+      this.shotQueue.push(e);
+      return;
+    }
     this.animating = true;
     this.pendingShot = true;
     this.hud.setEnabled(false);
@@ -739,6 +758,11 @@ export class GameScreen {
       st.potted += out.potted.length;
       st.bestStreak = Math.max(st.bestStreak, this.streak);
       saveStats(st);
+    }
+    const queued = this.shotQueue.shift();
+    if (queued) {
+      this.onShot(queued);
+      return;
     }
     const next = this.deferred ?? this.v;
     this.deferred = null;
