@@ -209,7 +209,7 @@ export class AimView {
       if (full) this.obj.set(op.x, op.y, op.x + info.objDx * len, op.y + info.objDy * len);
       else this.obj.mesh.visible = false;
       if (full && pocket && pocket.index >= 0) {
-        const col = pocket.enters ? 0x5df08a : 0xffa34d;
+        const col = pocket.quality === 'ok' ? 0x5df08a : pocket.quality === 'tight' ? 0xffd24a : 0xff7a4d;
         ((this.pocket.mesh.material as THREE.MeshBasicMaterial)).color.setHex(col);
         (this.pocketRing.material as THREE.MeshBasicMaterial).color.setHex(col);
         this.obj.mesh.visible = false;

@@ -101,13 +101,15 @@ export interface PocketAim {
   /** ponto da boca da caçapa (plano da física) */
   x: number;
   y: number;
-  /** a reta da bola alvo passa pela boca (com folga de bola) */
+  /** a reta da bola alvo passa pela boca com folga (medido na física: entra em praticamente todas as tacadas) */
   enters: boolean;
+  /** 'ok' entra | 'tight' só entra com tacada certeira (entra em 20–80%) | 'out' não entra */
+  quality: 'ok' | 'tight' | 'out';
 }
 
 /** Caçapa mais alinhada com a saída da bola alvo e se a reta entra na boca. */
 export function pocketAim(ox: number, oy: number, dx: number, dy: number): PocketAim {
-  let best: PocketAim = { index: -1, x: ox, y: oy, enters: false };
+  let best: PocketAim = { index: -1, x: ox, y: oy, enters: false, quality: 'out' };
   let bestAng = 0.6;
   POCKETS.forEach((p, i) => {
     const mx = (p.ax + p.bx) / 2;
@@ -121,7 +123,12 @@ export function pocketAim(ox: number, oy: number, dx: number, dy: number): Pocke
     if (ang < bestAng) {
       bestAng = ang;
       const half = Math.hypot(p.bx - p.ax, p.by - p.ay) / 2;
-      best = { index: i, x: mx, y: my, enters: perp < half - BALL_R * 0.6 };
+      // limites medidos na física do jogo: canto entra sempre até 20% do raio útil e some depois de 40%; meio até 30% e 45%
+      const span = half + BALL_R;
+      const okLim = span * (p.side ? 0.3 : 0.2);
+      const tightLim = span * (p.side ? 0.45 : 0.4);
+      const quality = perp <= okLim ? 'ok' : perp <= tightLim ? 'tight' : 'out';
+      best = { index: i, x: mx, y: my, enters: quality === 'ok', quality };
     }
   });
   return best;

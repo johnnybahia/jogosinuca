@@ -11,6 +11,7 @@ describe('mira', () => {
     const r = pocketAim(ox, oy, (HL - ox) / l, (HW - oy) / l);
     expect(r.index).toBe(3);
     expect(r.enters).toBe(true);
+    expect(r.quality).toBe('ok');
   });
 
   it('desviada para o lado: aponta a caçapa mais próxima mas a reta não entra', () => {
