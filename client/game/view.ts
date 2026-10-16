@@ -337,7 +337,7 @@ export class PoolView {
     this.cue.setFade(false);
     this.cue.setVisible(true);
     this.followCue = true;
-    this.cam.mode = 'aim';
+    if (this.cam.mode !== 'top') this.cam.mode = 'aim';
   }
 
   get playing(): boolean {
@@ -402,7 +402,7 @@ export class PoolView {
         this.cam.ty = cb.y;
       }
       this.cam.calm = 1.4;
-      this.cam.mode = 'aim';
+      if (this.cam.mode !== 'top') this.cam.mode = 'aim';
       this.cue.setVisible(false);
       this.handlers.onDone?.(done);
     }

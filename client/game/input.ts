@@ -7,9 +7,9 @@ export interface InputCallbacks {
   /** gira a mira (delta em radianos, + = anti-horário visto de cima) */
   rotate(delta: number): void;
   /** aponta a mira para um ponto da mesa (vista de cima) */
-  pointAt(x: number, y: number): void;
+  pointAt(x: number, y: number, start?: boolean): void;
   /** arrasta a bola branca (bola na mão); retorna true se pegou a bola */
-  place(x: number, y: number, start: boolean): void;
+  place(x: number, y: number, start?: boolean): void;
   sens(): number;
 }
 
@@ -69,7 +69,7 @@ export class AimInput {
       if (p) this.cb.place(p.x, p.y, true);
     } else if (mode === 'top') {
       this.dragging = true;
-      if (p) this.cb.pointAt(p.x, p.y);
+      if (p) this.cb.pointAt(p.x, p.y, true);
     } else {
       this.dragging = true;
     }
@@ -107,7 +107,7 @@ export class AimInput {
     } else if (mode === 'top' && this.dragging) {
       const n = this.ndc(e);
       const p = this.view.cam.pick(n.x, n.y);
-      if (p) this.cb.pointAt(p.x, p.y);
+      if (p) this.cb.pointAt(p.x, p.y, false);
     } else if (mode === 'aim' && this.dragging) {
       const k = 0.0027 * this.cb.sens() * clamp(this.view.cam.userDist / 1.05, 0.35, 1.8);
       this.cb.rotate(-dx * k * (e.shiftKey ? 0.25 : 1));
@@ -137,7 +137,7 @@ export class AimInput {
 
   zoom(f: number): void {
     const c = this.view.cam;
-    if (c.mode === 'top') c.topZoom = clamp(c.topZoom * f, 0.45, 1.4);
+    if (c.mode === 'top' || c.overview) c.topZoom = clamp(c.topZoom * f, 0.25, 1.4);
     else {
       c.userDist = clamp(c.userDist * f, 0.22, 3);
       c.manualZoom = true;

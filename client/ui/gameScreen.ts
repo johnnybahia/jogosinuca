@@ -38,6 +38,10 @@ export class GameScreen {
   private photos: Record<string, string> = {};
   private phase: Phase = 'wait';
   private animating = false;
+  /** vista de cima escolhida pelo jogador: a câmera fica fixa (inclusive na tacada e na vez do adversário) */
+  private topLock = false;
+  private topOff = 0;
+  private placeOff = { x: 0, y: 0 };
   private woodGame = 0;
   private turnGame = '';
   /** até quando o aviso do resultado da tacada fica na tela (o aviso de vez espera) */
@@ -98,8 +102,8 @@ export class GameScreen {
     this.input = new AimInput(o.view.canvas, o.view, {
       mode: () => this.inputMode(),
       rotate: (d) => this.rotate(d),
-      pointAt: (x, y) => this.pointAt(x, y),
-      place: (x, y) => this.dragCue(x, y),
+      pointAt: (x, y, start) => this.pointAt(x, y, start),
+      place: (x, y, start) => this.dragCue(x, y, start),
       sens: () => loadPrefs().sens,
     });
     window.addEventListener('keydown', this.onKeyDown);
@@ -318,8 +322,8 @@ export class GameScreen {
       this.phase = 'wait';
       this.hud.setPlacing(false);
       this.hud.setEnabled(false);
-      this.top = false;
-      this.view.setCameraMode('aim');
+      this.top = this.topLock;
+      this.view.setCameraMode(this.topLock ? 'top' : 'aim');
       const opp = v.players.find((p) => p.seat === m.turn);
       const c = m.balls.find((b) => b.id === 0)!;
       this.aim = { angle: this.aim.angle, a: 0, b: 0, pull: 0.1 };
@@ -371,7 +375,7 @@ export class GameScreen {
     const sp = this.spinKeep;
     this.hud.setSpin(sp.a, sp.b);
     this.aim = { angle: this.aim.angle, a: sp.a, b: sp.b, pull: 0.05 };
-    this.top = this.top && this.phase === 'aim' ? this.top : false;
+    this.top = this.topLock;
     this.view.setCameraMode(this.top ? 'top' : 'aim');
     this.view.setAim(this.aim, loadPrefs().guide);
     this.hud.setHint(announce ? 'Arraste para mirar · puxe a força para baixo e solte' : '', 5000);
@@ -390,20 +394,32 @@ export class GameScreen {
     this.aim.angle += d;
     this.pushAim();
   }
-  private pointAt(x: number, y: number): void {
+  /** Vista de cima: o dedo gira a mira em volta da branca sem pular (parte do ângulo atual) e funciona de qualquer ponto da tela. */
+  private pointAt(x: number, y: number, start = false): void {
     if (this.phase !== 'aim') return;
     const c = this.view.getPositions().find((b) => b.id === 0);
     if (!c) return;
     const dx = x - c.x;
     const dy = y - c.y;
-    if (dx * dx + dy * dy < 0.0016) return;
-    this.aim.angle = Math.atan2(dy, dx);
+    if (dx * dx + dy * dy < 0.0064) return;
+    const ang = Math.atan2(dy, dx);
+    if (start) {
+      this.topOff = this.aim.angle - ang;
+      return;
+    }
+    this.aim.angle = ang + this.topOff;
     this.pushAim();
   }
-  private dragCue(x: number, y: number): void {
+  /** Bola na mão: arrasta a partir de qualquer ponto, a bola anda junto com o dedo (sem pular para o toque). */
+  private dragCue(x: number, y: number, start = false): void {
     const m = this.match;
     if (!m || this.phase !== 'place') return;
-    const p = nearestFree(m, x, y);
+    const c = this.placed ?? m.balls.find((b) => b.id === 0)!;
+    if (start) {
+      this.placeOff = { x: c.x - x, y: c.y - y };
+      return;
+    }
+    const p = nearestFree(m, x + this.placeOff.x, y + this.placeOff.y);
     this.placed = p;
     this.view.setCueBall(p.x, p.y);
   }
@@ -412,7 +428,7 @@ export class GameScreen {
     const p = this.placed ?? this.match.balls.find((b) => b.id === 0)!;
     this.placed = { x: p.x, y: p.y };
     this.view.setCueBall(p.x, p.y);
-    this.top = false;
+    this.top = this.topLock;
     sndClick();
     this.beginAim(false);
     // mantém a posição escolhida para a tacada
@@ -509,6 +525,7 @@ export class GameScreen {
     if (this.phase === 'place') return;
     if (this.phase !== 'aim' && this.phase !== 'wait') return;
     this.top = !this.top;
+    this.topLock = this.top;
     this.view.setCameraMode(this.top ? 'top' : 'aim');
     this.hud.setButtons({ top: this.top, guide: loadPrefs().guide, muted: isMuted() });
     sndClick();
@@ -533,6 +550,13 @@ export class GameScreen {
 
   private toggleZoom(): void {
     const c = this.view.cam;
+    if (c.mode === 'top' || c.overview) {
+      const near = c.topZoom > 0.6;
+      c.topZoom = near ? 0.35 : 1;
+      this.hud.setZoomOn(near);
+      sndClick();
+      return;
+    }
     const close = c.userDist > 0.5;
     c.userDist = close ? 0.3 : 1.05;
     this.hud.setZoomOn(close);
@@ -607,8 +631,8 @@ export class GameScreen {
       // o adversário mira um instante antes de bater
       const from = Number.isFinite(this.aim.angle) ? this.aim.angle : ang;
       this.view.setBalls(e.start);
-      this.top = false;
-      this.view.setCameraMode('aim');
+      this.top = this.topLock;
+      this.view.setCameraMode(this.topLock ? 'top' : 'aim');
       let d = ang - from;
       d = ((d + Math.PI) % (Math.PI * 2) + Math.PI * 2) % (Math.PI * 2) - Math.PI;
       this.pre = { t0: performance.now(), dur: 650 + Math.min(500, Math.abs(d) * 500), from: from, to: from + d, ev: e };
@@ -619,8 +643,8 @@ export class GameScreen {
   }
 
   private play(e: ShotEvent): void {
-    this.view.setCameraMode('aim');
-    this.top = false;
+    this.view.setCameraMode(this.topLock ? 'top' : 'aim');
+    this.top = this.topLock;
     this.view.playShot(e.start, e.shot, {
       onEvent: (ev: SimEvent) => this.onSimEvent(ev),
       onDone: () => this.shotDone(e),

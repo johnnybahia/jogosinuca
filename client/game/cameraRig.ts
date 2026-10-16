@@ -116,7 +116,11 @@ export class CameraRig {
         gYaw = Math.PI / 2;
         gPitch = 0.95;
         const corners = [-1, 1].flatMap((sx) => [-1, 1].map((sy) => ({ x: sx * (HL + 0.12), y: sy * (HW + 0.12) })));
-        gDist = this.fitDist(0, 0, gYaw, gPitch, fovT, 1.2, 4.5, corners);
+        gDist = this.fitDist(0, 0, gYaw, gPitch, fovT, 1.2, 4.5, corners) * this.topZoom;
+        // aproximando, o foco vai da mesa inteira para a branca (onde o taco mira)
+        const k = Math.min(1, Math.max(0, (1 - this.topZoom) / 0.6));
+        gx = this.tx * k;
+        gy = this.ty * k;
       } else if (this.frame && this.frame.length > 1 && this.userDist > 0.6 && !this.manualZoom) {
         // enquadra branca, bola alvo e caçapa; o ponto de mira anda um pouco em direção a eles
         const c0 = this.frame[0]!;
@@ -147,8 +151,9 @@ export class CameraRig {
       }
       if (this.frame && this.frame.length > 1 && !f.high) gDist = Math.max(gDist, this.fitDist(gx, gy, gYaw, gPitch, fovT, gDist, 3.2, this.frame));
     } else if (this.mode === 'top') {
-      gx = 0;
-      gy = 0;
+      const kz = Math.min(1, Math.max(0, (1 - this.topZoom) / 0.6));
+      gx = this.tx * kz;
+      gy = this.ty * kz;
       gTop = 1;
       gYaw = Math.PI / 2;
       gPitch = 1.5;
