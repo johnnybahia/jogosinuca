@@ -128,6 +128,8 @@ export class GameScreen {
       onGuide: () => this.toggleGuide(),
       onSound: () => this.toggleSound(),
       onMenu: () => this.openMenu(),
+      onStep: (deg) => this.stepAim(deg),
+      onBaseCam: () => this.baseCamera(),
       onFine: (d) => this.rotate(d * 0.0016 * (this.view.cam.userDist / 1.05)),
       onConfirmPlace: () => this.confirmPlace(),
       onHint: () => this.hint(),
@@ -362,6 +364,7 @@ export class GameScreen {
       if (wasMine || this.turnGame !== gameKey) this.announceTurn(`Vez de ${oppName}`, m.inHand !== 'none' ? 'Bola na mão para ele' : 'Aguarde a jogada', 'wait', 1300);
       this.turnGame = gameKey;
       this.phase = 'wait';
+      this.hud.setAimDeg(null);
       this.hud.setPlacing(false);
       this.hud.setEnabled(false);
       this.top = this.topLock;
@@ -425,6 +428,7 @@ export class GameScreen {
     if (ang !== null) this.aim.angle = ang;
     else if (!Number.isFinite(this.aim.angle)) this.aim.angle = 0;
     this.spinKeep = { a: 0, b: 0 };
+    this.hud.setAimDeg((this.aim.angle * 180) / Math.PI);
     const sp = this.spinKeep;
     this.hud.setSpin(sp.a, sp.b);
     this.aim = { angle: this.aim.angle, a: sp.a, b: sp.b, pull: 0.05 };
@@ -522,6 +526,7 @@ export class GameScreen {
   }
   private pushAim(send = true): void {
     this.view.setAim(this.aim, loadPrefs().guide);
+    this.hud.setAimDeg(this.phase === 'aim' ? (this.aim.angle * 180) / Math.PI : null);
     if (send && this.backend.mode === 'online') {
       const now = performance.now();
       if (now - this.oppAimAt > 90) {
@@ -538,6 +543,7 @@ export class GameScreen {
     const c = m.balls.find((b) => b.id === 0)!;
     const pos = this.view.getPositions().find((b) => b.id === 0) ?? c;
     this.phase = 'shooting';
+    this.hud.setAimDeg(null);
     this.placed = null;
     this.pendingShot = true;
     this.hud.setAimInfo('');
@@ -591,6 +597,35 @@ export class GameScreen {
     this.view.setTable(w === 'pacote' ? 'pacote' : 'codigo');
     if (w !== 'pacote') this.view.setWood(w);
     this.view.setCue(pr.cue === 'aleatorio' ? (Math.random() < 0.5 ? 'pacote' : 'classico') : pr.cue);
+  }
+
+  /** Um grau de cada vez: toque único, sem arrastar. + = mira para a direita (gira no sentido horário visto de cima). */
+  private stepAim(deg: number): void {
+    if (this.phase !== 'aim') return;
+    this.aim.angle -= (deg * Math.PI) / 180;
+    this.pushAim();
+    this.hud.setAimDeg((this.aim.angle * 180) / Math.PI);
+    sndClick();
+  }
+
+  /** Câmera base: tira vista de cima/da mesa/zoom e volta ao enquadramento original. */
+  private baseCamera(): void {
+    const c = this.view.cam;
+    c.userDist = 1.05;
+    c.userPitch = 0.5;
+    c.topZoom = 1;
+    c.overview = false;
+    c.manualZoom = false;
+    this.overview = false;
+    this.topLock = false;
+    if (this.phase !== 'place') {
+      this.top = false;
+      this.view.setCameraMode('aim');
+    }
+    this.hud.setTableOn(false);
+    this.hud.setZoomOn(false);
+    this.hud.setButtons({ top: this.top, guide: loadPrefs().guide, muted: isMuted() });
+    sndClick();
   }
 
   private overview = false;

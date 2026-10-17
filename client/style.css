@@ -159,6 +159,8 @@ input { font: inherit; }
 .left-row { display: flex; flex-wrap: wrap; gap: 3px; }
 
 .tools { position: absolute; left: calc(var(--sal) + 14px); bottom: calc(var(--sab) + 184px); display: grid; grid-template-columns: repeat(2, auto); gap: 8px; pointer-events: auto; }
+.tools.closed .tx { display: none; }
+.tools:not(.closed) { grid-template-columns: repeat(3, auto); }
 .ibtn { appearance: none; width: 42px; height: 42px; border-radius: 12px; border: 1px solid var(--line); background: rgba(10, 13, 18, 0.78); color: var(--ink); font-size: 1.15rem; cursor: pointer; touch-action: manipulation; pointer-events: auto; }
 .ibtn.on { border-color: var(--gold); color: var(--gold); }
 .ibtn.off { color: var(--danger); }
@@ -175,7 +177,7 @@ input { font: inherit; }
 .turn-chip.show { opacity: 1; }
 .turn-chip.mine { background: linear-gradient(180deg, #f1d57c, var(--gold2)); border-color: transparent; color: #1a1306; box-shadow: 0 0 16px rgba(230, 195, 92, 0.55); }
 .banner-s { color: #d9d3c8; margin-top: 4px; font-size: 0.95rem; }
-.hint { position: absolute; left: 0; right: 0; bottom: calc(var(--sab) + 64px); padding: 0 120px; text-align: center; font-size: 0.85rem; color: #d9d3c8; text-shadow: 0 2px 8px #000; opacity: 0; transition: opacity 0.3s; }
+.hint { position: absolute; left: 0; right: 0; bottom: calc(var(--sab) + 92px); padding: 0 120px; text-align: center; font-size: 0.85rem; color: #d9d3c8; text-shadow: 0 2px 8px #000; opacity: 0; transition: opacity 0.3s; }
 .hint.show { opacity: 0.9; }
 .aim-info { position: absolute; left: 50%; top: calc(var(--sat) + 78px); transform: translateX(-50%); padding: 4px 12px; border-radius: 999px; background: rgba(10, 13, 18, 0.7); border: 1px solid var(--line); font-size: 0.78rem; font-weight: 600; color: #f2e9d0; opacity: 0; transition: opacity 0.2s; pointer-events: none; white-space: nowrap; }
 .aim-info.show { opacity: 0.95; }
@@ -201,14 +203,20 @@ input { font: inherit; }
 .spin-label { font: 700 0.6rem system-ui; letter-spacing: 0.16em; color: var(--muted); }
 
 /* ajuste fino */
-.fine { position: absolute; left: 50%; bottom: calc(var(--sab) + 14px); transform: translateX(-50%); width: min(58vw, 440px); height: 40px; pointer-events: none; opacity: 0.5; touch-action: none; }
+.finewrap { position: absolute; left: 50%; bottom: calc(var(--sab) + 10px); transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; gap: 2px; pointer-events: none; }
+.fine-row { display: flex; align-items: center; gap: 8px; }
+.fine-deg { font: 700 0.72rem system-ui; letter-spacing: 0.08em; color: #e9e2d0; text-shadow: 0 1px 6px #000; min-height: 1em; }
+.fstep { appearance: none; min-width: 58px; height: 40px; border-radius: 12px; border: 1px solid var(--line); background: rgba(10, 13, 18, 0.82); color: var(--ink); font: 700 0.85rem system-ui; touch-action: manipulation; pointer-events: none; opacity: 0.5; }
+.hud.can-play .fstep { pointer-events: auto; opacity: 1; }
+.fstep:active { background: var(--gold2); color: #1a1306; }
+.fine { position: relative; width: min(34vw, 300px); height: 40px; pointer-events: none; opacity: 0.5; touch-action: none; }
 .hud.can-play .fine { pointer-events: auto; opacity: 1; }
 .fine-track { position: absolute; left: 0; right: 0; top: 15px; height: 10px; border-radius: 6px; background: rgba(10, 13, 18, 0.82); border: 1px solid var(--line); }
 .fine-knob { position: absolute; left: 50%; top: 6px; width: 44px; height: 28px; margin-left: -22px; border-radius: 14px; background: rgba(255, 255, 255, 0.88); box-shadow: 0 3px 10px rgba(0, 0, 0, 0.5); transition: left 0.12s; }
 .fine-l, .fine-r { position: absolute; top: 9px; font-size: 1rem; color: var(--muted); }
 .fine-l { left: 8px; }
 .fine-r { right: 8px; }
-.hud.placing .power, .hud.placing .spinwrap, .hud.placing .fine { display: none; }
+.hud.placing .power, .hud.placing .spinwrap, .hud.placing .finewrap { display: none; }
 .placebar { position: absolute; left: 50%; bottom: calc(var(--sab) + 18px); transform: translateX(-50%); display: flex; gap: 14px; align-items: center; padding: 10px 16px; border-radius: 16px; background: rgba(10, 13, 18, 0.9); border: 1px solid var(--gold); pointer-events: auto; font-size: 0.9rem; }
 
 /* ---------- resultado ---------- */

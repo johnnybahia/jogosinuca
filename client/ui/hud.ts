@@ -1,5 +1,5 @@
 import { groupName, type Group, type MatchState, MODES, POINTS_TO_WIN, groupOf } from '../../shared/rules';
-import { avatarColor } from '../store';
+import { avatarColor, loadPrefs, savePrefs } from '../store';
 import { avatarEl, h } from './dom';
 import { EMOTES, type RoomPlayer, type RoomView } from '../../shared/protocol';
 
@@ -31,6 +31,10 @@ export interface HudHandlers {
   onSound(): void;
   onMenu(): void;
   onFine(delta: number): void;
+  /** passo de ajuste da mira em graus (+ = gira para a direita) */
+  onStep(deg: number): void;
+  /** volta a câmera base (zoom, inclinação e vistas) */
+  onBaseCam(): void;
   onConfirmPlace(): void;
   onCam?(): void;
   onMic?(): void;
@@ -54,6 +58,9 @@ export class Hud {
   private spinDot = h('div', { class: 'spin-dot' });
   private fine = h('div', { class: 'fine' });
   private fineKnob = h('div', { class: 'fine-knob' });
+  private fineDeg = h('div', { class: 'fine-deg' });
+  private tools!: HTMLElement;
+  private btnToggle!: HTMLButtonElement;
   private hint = h('div', { class: 'hint' });
   private placeBar = h('div', { class: 'placebar' });
   private bannerT = 0;
@@ -102,7 +109,13 @@ export class Hud {
     this.btnHint.hidden = true;
     for (const b of [this.btnCam, this.btnMic, this.btnEmote]) b.hidden = true;
     EMOTES.forEach((e, i) => this.emotes.append(h('button', { class: 'emote-btn', text: e, attrs: { type: 'button' }, on: { click: () => { this.emotes.classList.remove('open'); hd.onEmote?.(i); } } })));
-    const tools = h('div', { class: 'tools' }, this.btnView, this.btnTable, this.btnZoom, this.btnGuide, this.btnSound, this.btnHint, this.btnCam, this.btnMic, this.btnEmote, btnMenu);
+    // menu lateral recolhível: só ficam visíveis o botão de abrir e o da câmera base
+    this.btnToggle = mk('⋯', 'Mostrar/esconder botões', () => this.setToolsOpen(this.tools.classList.contains('closed')));
+    const btnBase = mk('🎥', 'Câmera base: volta ao enquadramento original', () => hd.onBaseCam());
+    for (const b of [this.btnView, this.btnTable, this.btnZoom, this.btnGuide, this.btnSound, this.btnHint, this.btnCam, this.btnMic, this.btnEmote, btnMenu]) b.classList.add('tx');
+    const tools = h('div', { class: 'tools closed' }, this.btnToggle, btnBase, this.btnView, this.btnTable, this.btnZoom, this.btnGuide, this.btnSound, this.btnHint, this.btnCam, this.btnMic, this.btnEmote, btnMenu);
+    this.tools = tools;
+    this.setToolsOpen(loadPrefs().toolsOpen);
 
     // força: puxe a alça para baixo e solte para tacar
     this.power.append(h('div', { class: 'power-track' }, this.powerFill), this.powerHint, this.powerKnob, this.powerLabel);
@@ -115,11 +128,14 @@ export class Hud {
     // ajuste fino da mira
     this.fine.append(h('div', { class: 'fine-track' }), this.fineKnob, h('span', { class: 'fine-l', text: '◂' }), h('span', { class: 'fine-r', text: '▸' }));
     this.bindFine();
+    // passos de 1 grau: um toque, um grau (sem arrastar, sem passar do ponto)
+    const step = (label: string, title: string, deg: number): HTMLButtonElement => h('button', { class: 'fstep', text: label, attrs: { type: 'button', title, 'aria-label': title }, on: { click: () => hd.onStep(deg) } });
+    const fineWrap = h('div', { class: 'finewrap' }, this.fineDeg, h('div', { class: 'fine-row' }, step('◂ 1°', 'Mira 1 grau para a esquerda', -1), this.fine, step('1° ▸', 'Mira 1 grau para a direita', 1)));
 
     this.placeBar.append(h('span', { text: 'Arraste a bola branca para posicionar' }), h('button', { class: 'btn primary small', text: 'Confirmar', attrs: { type: 'button' }, on: { click: () => hd.onConfirmPlace() } }));
     this.placeBar.hidden = true;
 
-    this.root.append(top, tools, this.emotes, this.holder, this.banner, this.hint, this.aimInfo, this.power, h('div', { class: 'spinwrap' }, this.spin, h('div', { class: 'spin-label', text: 'EFEITO' })), this.fine, this.placeBar);
+    this.root.append(top, tools, this.emotes, this.holder, this.banner, this.hint, this.aimInfo, this.power, h('div', { class: 'spinwrap' }, this.spin, h('div', { class: 'spin-label', text: 'EFEITO' })), fineWrap, this.placeBar);
     this.setEnabled(false);
   }
 
@@ -256,6 +272,22 @@ export class Hud {
     this.enabled = on;
     this.root.classList.toggle('can-play', on);
     if (!on) this.setPower(0);
+  }
+
+  setToolsOpen(open: boolean): void {
+    this.tools.classList.toggle('closed', !open);
+    this.btnToggle.classList.toggle('on', open);
+    this.btnToggle.textContent = open ? '✕' : '⋯';
+    try {
+      savePrefs({ ...loadPrefs(), toolsOpen: open });
+    } catch {
+      /* sem armazenamento */
+    }
+  }
+
+  /** Direção da mira em graus (referência para os passos de 1°). */
+  setAimDeg(deg: number | null): void {
+    this.fineDeg.textContent = deg === null ? '' : `Mira ${(((deg % 360) + 360) % 360).toFixed(1)}°`;
   }
 
   setTableOn(on: boolean): void {

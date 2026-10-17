@@ -94,6 +94,8 @@ export interface Prefs {
   cue: string;
   /** linha de mira completa (bola alvo até a caçapa, saída da branca) ou só até o contato */
   assist: boolean;
+  /** botões laterais da partida abertos */
+  toolsOpen: boolean;
   /** mostra a linha de mira (bola fantasma e saída das bolas) */
   guide: boolean;
   /** sensibilidade do giro da mira: 0.5 .. 2 */
@@ -107,7 +109,7 @@ const SIZE_PCT = [100, 115, 130] as const;
 let prefs: Prefs | null = null;
 export function loadPrefs(): Prefs {
   if (prefs) return prefs;
-  prefs = { quality: 'auto', felt: 'verde', wood: 'aleatoria', cue: 'aleatorio', guide: true, assist: false, sens: 1, size: 0, calm: false };
+  prefs = { quality: 'auto', felt: 'verde', wood: 'aleatoria', cue: 'aleatorio', guide: true, assist: false, toolsOpen: false, sens: 1, size: 0, calm: false };
   try {
     const p = JSON.parse(localStorage.getItem(PREFS_KEY) ?? 'null') as Partial<Prefs> | null;
     if (p) {
@@ -118,6 +120,7 @@ export function loadPrefs(): Prefs {
         cue: p.cue === 'classico' || p.cue === 'pacote' ? p.cue : 'aleatorio',
         guide: p.guide !== false,
         assist: p.assist === true,
+        toolsOpen: p.toolsOpen === true,
         sens: typeof p.sens === 'number' ? Math.min(2, Math.max(0.3, p.sens)) : 1,
         size: p.size === 1 || p.size === 2 ? p.size : 0,
         calm: p.calm === true,
