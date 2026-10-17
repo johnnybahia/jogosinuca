@@ -278,8 +278,9 @@ export function resolveShot(prev: MatchState, sim: Sim): { state: MatchState; ou
       s.inHand = 'any';
       out.message = foul;
       // falta: o infrator devolve à mesa uma das bolas que já fez
+      // (quem já fez todas as suas e joga na 8 não devolve bola: errar a preta só passa a vez com bola na mão)
       const gm = s.groups[me];
-      if (gm) {
+      if (gm && prevRemaining > 0) {
         for (let i = s.tray.length - 1; i >= 0; i--) {
           const id = s.tray[i]!;
           if (id > 0 && id !== 8 && groupOf(s.mode, id) === gm) {

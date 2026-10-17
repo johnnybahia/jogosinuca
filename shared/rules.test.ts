@@ -110,6 +110,22 @@ describe('regras', () => {
     expect(r.state.inHand).toBe('any');
   });
 
+  it('errar a 8 (só ela restando) é falta sem devolver bola', () => {
+    const s = newMatch('par_impar');
+    s.groups = ['even', 'odd'] as never;
+    s.tray = [2, 4, 6, 10, 12, 14];
+    for (const b of s.balls) if (s.tray.includes(b.id)) b.on = false;
+    const sim = simFrom(s);
+    sim.firstHit = 3; // tocou numa bola do adversário em vez da 8
+    sim.railAfterHit = true;
+    const r = resolveShot(s, sim);
+    expect(r.out.foul).not.toBeNull();
+    expect(r.out.respotted).toEqual([]);
+    expect(r.state.tray.length).toBe(6);
+    expect(r.state.turn).toBe(1);
+    expect(r.state.inHand).toBe('any');
+  });
+
   it('simulação real: quebra gera estado consistente', () => {
     const s = newMatch('lisas_listradas');
     const balls: Ball[] = [];
