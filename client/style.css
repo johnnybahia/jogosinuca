@@ -161,6 +161,9 @@ input { font: inherit; }
 .tools { position: absolute; left: calc(var(--sal) + 14px); bottom: calc(var(--sab) + 196px); display: flex; flex-direction: column; gap: 8px; pointer-events: auto; }
 .tools.closed .tools-panel { display: none; }
 .tools-cam { display: flex; gap: 8px; }
+.lowcam { display: flex; align-items: center; gap: 6px; width: 142px; padding: 0 6px; height: 30px; border-radius: 10px; background: rgba(10, 13, 18, 0.78); border: 1px solid var(--line); }
+.lowcam-l { font: 700 0.58rem system-ui; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.lowrange { flex: 1; min-width: 0; height: 24px; margin: 0; accent-color: var(--gold); touch-action: none; pointer-events: auto; }
 .tools-menu { position: relative; }
 .tools-panel { position: absolute; left: calc(100% + 8px); bottom: 0; display: grid; grid-template-columns: repeat(3, auto); gap: 8px; padding: 8px; border-radius: 14px; background: rgba(8, 10, 14, 0.78); border: 1px solid var(--line); }
 .ibtn { appearance: none; width: 42px; height: 42px; border-radius: 12px; border: 1px solid var(--line); background: rgba(10, 13, 18, 0.78); color: var(--ink); font-size: 1.15rem; cursor: pointer; touch-action: manipulation; pointer-events: auto; }

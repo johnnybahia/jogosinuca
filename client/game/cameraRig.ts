@@ -28,6 +28,9 @@ export class CameraRig {
   topZoom = 1;
   /** vista da mesa: câmera alta e fixa, mesa toda na tela, a mira continua funcionando */
   overview = false;
+  /** 0..1: baixa a câmera da base até a linha do taco (altura da bola); o jogador ajusta à mão */
+  lowK = 0;
+  private lowCur = 0;
   /** vista de contato: câmera de perto no ponto onde a branca toca a bola alvo (ou na primeira tabela) */
   contactMode = false;
   contactFocus: { x: number; y: number } | null = null;
@@ -134,7 +137,7 @@ export class CameraRig {
         const k = Math.min(1, Math.max(0, (1 - this.topZoom) / 0.6));
         gx = this.tx * k;
         gy = this.ty * k;
-      } else if (this.frame && this.frame.length > 1 && this.userDist > 0.6 && !this.manualZoom) {
+      } else if (this.frame && this.frame.length > 1 && this.userDist > 0.6 && !this.manualZoom && this.lowCur < 0.03) {
         // enquadra branca, bola alvo e caçapa; o ponto de mira anda um pouco em direção a eles
         const c0 = this.frame[0]!;
         let mx = 0;
@@ -148,6 +151,16 @@ export class CameraRig {
         gx = c0.x + (mx - c0.x) * 0.3;
         gy = c0.y + (my - c0.y) * 0.3;
         gDist = Math.max(gDist, this.fitDist(gx, gy, gYaw, gPitch, fovT, gDist, 3.2, this.frame));
+      }
+      // câmera baixa (linha do taco): desce até a altura da bola, chega mais perto e olha um pouco à frente, ao longo da mira
+      if (!this.overview && this.lowCur > 0.001) {
+        const k = this.lowCur;
+        gPitch = gPitch * (1 - k) + 0.04 * k;
+        gDist *= 1 - 0.28 * k;
+        if (!(this.contactMode && this.contactFocus)) {
+          gx += Math.cos(this.aimAngle) * 0.32 * k;
+          gy += Math.sin(this.aimAngle) * 0.32 * k;
+        }
       }
     } else if (this.mode === 'follow') {
       const f = follow ?? { x: this.tx, y: this.ty };
@@ -183,6 +196,7 @@ export class CameraRig {
     }
     if (this.mode !== 'aim') this.calm = 0;
     else if (this.calm > 0) this.calm -= dt;
+    this.lowCur += (this.lowK - this.lowCur) * (1 - Math.exp(-7 * dt));
     const rate = this.mode === 'follow' ? (follow?.high ? 3.2 : 2.2) : this.mode === 'top' ? 4.2 : this.mode === 'menu' ? 1.5 : this.calm > 0 ? 3 : 6.5;
     sc.x = damp(sc.x, gx, rate, dt);
     sc.z = damp(sc.z, -gy, rate, dt);
@@ -203,7 +217,7 @@ export class CameraRig {
       const lim = (c: number, u: number, half: number): number => (Math.abs(u) < 1e-4 ? Infinity : u > 0 ? (half - c) / u : (-half - c) / u);
       const tn = Math.max(0.03, Math.min(lim(sc.x, ux, HL), lim(sc.z, uz, HW)));
       // a madeira da tabela só atrapalha quando a bola está colada nela: sobe o suficiente para o olhar passar por cima
-      pitchEff = Math.min(1.2, Math.max(sc.pitch, Math.atan(0.1 / tn)));
+      pitchEff = Math.min(1.2, Math.max(sc.pitch, Math.atan(0.1 / tn) * (1 - this.lowCur)));
     }
     sc.pEff = damp(sc.pEff, pitchEff, 8, dt);
     const cp = Math.cos(sc.pEff);

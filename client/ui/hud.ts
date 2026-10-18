@@ -28,6 +28,8 @@ export interface HudHandlers {
   onZoom(): void;
   onTable(): void;
   onContact(): void;
+  /** altura da câmera: 0 = base, 1 = linha do taco (rente à mesa) */
+  onLow(k: number): void;
   onGuide(): void;
   onSound(): void;
   onMenu(): void;
@@ -72,6 +74,8 @@ export class Hud {
   private btnZoom!: HTMLButtonElement;
   private btnTable!: HTMLButtonElement;
   private btnContact!: HTMLButtonElement;
+  private btnLow!: HTMLButtonElement;
+  private lowRange!: HTMLInputElement;
   private aimInfo = h('div', { class: 'aim-info' });
   private turnChip = h('div', { class: 'turn-chip' });
   private btnCam!: HTMLButtonElement;
@@ -114,10 +118,21 @@ export class Hud {
     // menu lateral recolhível: só ficam visíveis o botão de abrir e o da câmera base
     this.btnToggle = mk('⋯', 'Mostrar/esconder botões', () => this.setToolsOpen(this.tools.classList.contains('closed')));
     this.btnContact = mk('🎯', 'Câmera de contato: de perto onde a branca vai bater', () => hd.onContact());
+    this.btnLow = mk('👁', 'Câmera na linha do taco (rente à mesa): toque para alternar', () => {
+      // vai até a linha do taco; se já estiver lá, volta à altura base
+      const down = Number(this.lowRange.value) < 95;
+      this.setLow(down ? 1 : 0);
+      hd.onLow(down ? 1 : 0);
+    });
+    this.lowRange = h('input', { class: 'lowrange', attrs: { type: 'range', min: '0', max: '100', step: '1', value: '0', 'aria-label': 'Baixar a câmera até a linha do taco' } }) as HTMLInputElement;
+    this.lowRange.addEventListener('input', () => {
+      this.btnLow.classList.toggle('on', Number(this.lowRange.value) > 0);
+      hd.onLow(Number(this.lowRange.value) / 100);
+    });
     const btnBase = mk('🎥', 'Câmera base: volta ao enquadramento original', () => hd.onBaseCam());
     // câmeras sempre visíveis ACIMA do menu; o menu (⋯) abre um painel ao lado, sem empurrar nada
     const panel = h('div', { class: 'tools-panel' }, this.btnView, this.btnTable, this.btnZoom, this.btnGuide, this.btnSound, this.btnHint, this.btnCam, this.btnMic, this.btnEmote, btnMenu);
-    const tools = h('div', { class: 'tools closed' }, h('div', { class: 'tools-cam' }, this.btnContact, btnBase), h('div', { class: 'tools-menu' }, this.btnToggle, panel));
+    const tools = h('div', { class: 'tools closed' }, h('div', { class: 'lowcam' }, h('span', { class: 'lowcam-l', text: 'altura' }), this.lowRange), h('div', { class: 'tools-cam' }, this.btnContact, btnBase, this.btnLow), h('div', { class: 'tools-menu' }, this.btnToggle, panel));
     this.tools = tools;
     this.setToolsOpen(loadPrefs().toolsOpen);
 
@@ -294,6 +309,12 @@ export class Hud {
   /** Direção da mira em graus (referência para os passos de 1°). */
   setAimDeg(deg: number | null): void {
     this.fineDeg.textContent = deg === null ? '' : `Mira ${(((deg % 360) + 360) % 360).toFixed(1)}°`;
+  }
+
+  /** Atualiza o controle de altura (0..1) sem disparar o evento. */
+  setLow(k: number): void {
+    this.lowRange.value = String(Math.round(k * 100));
+    this.btnLow.classList.toggle('on', k > 0);
   }
 
   setContactOn(on: boolean): void {

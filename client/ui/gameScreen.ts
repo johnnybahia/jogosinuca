@@ -126,6 +126,9 @@ export class GameScreen {
       onZoom: () => this.toggleZoom(),
       onTable: () => this.toggleTable(),
       onContact: () => this.toggleContact(),
+      onLow: (k) => {
+        this.view.cam.lowK = k;
+      },
       onGuide: () => this.toggleGuide(),
       onSound: () => this.toggleSound(),
       onMenu: () => this.openMenu(),
@@ -365,6 +368,7 @@ export class GameScreen {
       if (wasMine || this.turnGame !== gameKey) this.announceTurn(`Vez de ${oppName}`, m.inHand !== 'none' ? 'Bola na mão para ele' : 'Aguarde a jogada', 'wait', 1300);
       this.turnGame = gameKey;
       this.phase = 'wait';
+      this.resetContact();
       this.hud.setAimDeg(null);
       this.hud.setPlacing(false);
       this.hud.setEnabled(false);
@@ -544,6 +548,7 @@ export class GameScreen {
     const c = m.balls.find((b) => b.id === 0)!;
     const pos = this.view.getPositions().find((b) => b.id === 0) ?? c;
     this.phase = 'shooting';
+    this.resetContact();
     this.hud.setAimDeg(null);
     this.placed = null;
     this.pendingShot = true;
@@ -622,6 +627,8 @@ export class GameScreen {
     c.topZoom = 1;
     c.overview = false;
     c.manualZoom = false;
+    c.lowK = 0;
+    this.hud.setLow(0);
     this.contact = false;
     this.view.setContactView(false);
     this.hud.setContactOn(false);
@@ -638,6 +645,14 @@ export class GameScreen {
   }
 
   private contact = false;
+  /** A câmera de contato (🎯) volta à base a cada jogada. */
+  private resetContact(): void {
+    if (!this.contact) return;
+    this.contact = false;
+    this.view.setContactView(false);
+    this.hud.setContactOn(false);
+    this.hud.setZoomOn(false);
+  }
   /** Câmera de contato (🎯): de perto no ponto em que a branca toca a bola que você está mirando. */
   private toggleContact(): void {
     this.contact = !this.contact;
