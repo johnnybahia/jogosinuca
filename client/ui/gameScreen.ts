@@ -323,9 +323,9 @@ export class GameScreen {
         const low = m.balls.filter((b) => b.on && b.id > 0).map((b) => b.id);
         if (low.length) ids.add(Math.min(...low));
       } else if (m.mode === 'guerra') {
-        // Guerra: o anel marca as SUAS bolas (as que você não pode derrubar)
+        // Guerra: o anel marca as bolas que VOCÊ precisa derrubar (as do adversário)
         const g = m.groups[me];
-        if (g) for (const b of m.balls) if (b.on && b.id > 0 && groupOf('guerra', b.id) === g) ids.add(b.id);
+        if (g) for (const b of m.balls) if (b.on && b.id > 0 && groupOf('guerra', b.id) === otherGroup(g)) ids.add(b.id);
       } else {
         const g = m.groups[me];
         if (g) {
