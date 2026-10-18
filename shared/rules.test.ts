@@ -126,6 +126,18 @@ describe('regras', () => {
     expect(r.state.inHand).toBe('any');
   });
 
+  it('tocar na bola certa sem derrubar nada nem bater na tabela não é falta', () => {
+    const s = newMatch('par_impar');
+    s.breakShot = false;
+    const sim = simFrom(s);
+    sim.firstHit = 3;
+    sim.railAfterHit = false;
+    const r = resolveShot(s, sim);
+    expect(r.out.foul).toBeNull();
+    expect(r.state.turn).toBe(1);
+    expect(r.state.inHand).toBe('none');
+  });
+
   it('simulação real: quebra gera estado consistente', () => {
     const s = newMatch('lisas_listradas');
     const balls: Ball[] = [];

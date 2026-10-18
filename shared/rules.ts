@@ -204,8 +204,6 @@ export function resolveShot(prev: MatchState, sim: Sim): { state: MatchState; ou
   else if (first < 0) foul = 'A branca não tocou em nenhuma bola';
   else if (!legalFirstHit(prev, first)) {
     foul = s.mode === 'bola61' ? `Tinha que tocar na bola ${lowestOnTable(prev.balls)}` : first === 8 && prevRemaining !== 0 ? 'Tocou na 8 antes da hora' : 'Tocou primeiro numa bola do adversário';
-  } else if (objPotted.length === 0 && !sim.railAfterHit && !wasBreak) {
-    foul = 'Nenhuma bola tocou na tabela';
   }
 
   const out: ShotOutcome = { foul, message: '', again: false, potted: objPotted.slice(), respotted: [], over: false, winner: -1 };
