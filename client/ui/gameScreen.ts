@@ -849,6 +849,9 @@ export class GameScreen {
 
   // ---------- quadro a quadro ----------
   private frame(dt: number): void {
+    // câmera por cima da mesa (⌖ ou ▦): a barra de força fica transparente para não cobrir a mesa
+    const cm = this.view.cam;
+    this.hud.root.classList.toggle('overhead', cm.mode === 'top' || (cm.mode === 'aim' && cm.overview));
     // espera/mira do adversário
     if (this.pre) {
       const t = (performance.now() - this.pre.t0) / this.pre.dur;

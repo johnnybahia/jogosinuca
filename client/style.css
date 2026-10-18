@@ -192,6 +192,8 @@ input { font: inherit; }
 .power-track { position: absolute; left: 20px; top: 30px; bottom: 30px; width: 18px; border-radius: 10px; background: rgba(10, 13, 18, 0.82); border: 1px solid var(--line); overflow: hidden; }
 .power-fill { position: absolute; left: 0; right: 0; top: 0; height: 0; background: linear-gradient(180deg, #3ecf7b, #f2c11b 60%, #e5484d); border-radius: 10px; }
 .power-knob { position: absolute; left: 6px; width: 46px; height: 26px; margin-top: -13px; border-radius: 13px; background: linear-gradient(180deg, #f1d57c, var(--gold2)); box-shadow: 0 4px 14px rgba(0, 0, 0, 0.55); top: 30px; }
+.hud.overhead .power { opacity: 0.28; transition: opacity 0.25s; }
+.hud.overhead .power.drag { opacity: 1; }
 .power-label { position: absolute; left: 0; right: 0; top: 0; text-align: center; font: 700 0.62rem system-ui; letter-spacing: 0.14em; color: var(--muted); }
 .hud.can-play .power-label { color: var(--gold); }
 

@@ -156,6 +156,7 @@ export class Hud {
     this.power.addEventListener('pointerdown', (e) => {
       if (!this.enabled) return;
       drag = true;
+      this.power.classList.add('drag');
       this.power.setPointerCapture(e.pointerId);
       this.setPower(val(e));
       this.hd.onPower(this.powerVal, false);
@@ -169,6 +170,7 @@ export class Hud {
     const end = (e: PointerEvent): void => {
       if (!drag) return;
       drag = false;
+      this.power.classList.remove('drag');
       try {
         this.power.releasePointerCapture(e.pointerId);
       } catch {
