@@ -164,10 +164,10 @@ describe('guerra', () => {
     expect(on.length).toBe(14);
     expect(s.balls.find((b) => b.id === 15)!.on).toBe(false);
     expect(s.groups).toEqual(['blue', 'red']);
-    for (const b of on) expect(Math.abs(b.y) > 0.58 || b.x > 1.2).toBe(true);
-    expect(on.filter((b) => b.x > 1.2).length).toBe(4);
-    expect(on.filter((b) => groupOf('guerra', b.id) === 'blue').every((b) => b.y > 0)).toBe(true);
-    expect(on.filter((b) => groupOf('guerra', b.id) === 'red').every((b) => b.y < 0)).toBe(true);
+    for (const b of on) expect(Math.abs(b.y) > 0.58 || Math.abs(b.x) > 1.2).toBe(true);
+    expect(on.filter((b) => Math.abs(b.x) > 1.2).length).toBe(6);
+    expect(on.filter((b) => groupOf('guerra', b.id) === 'blue').every((b) => b.x < 0)).toBe(true);
+    expect(on.filter((b) => groupOf('guerra', b.id) === 'red').every((b) => b.x > 0)).toBe(true);
     // só bolas do adversário são alvo legal
     expect(targets(s).every((id) => groupOf('guerra', id) === 'red')).toBe(true);
     expect(legalFirstHit(s, 3)).toBe(false);
@@ -263,7 +263,7 @@ describe('guerra', () => {
     expect(st.inHand).toBe('none');
     const b10 = st.balls.find((b: { id: number }) => b.id === 10);
     expect(b10.on).toBe(true);
-    expect(b10.y).toBeLessThan(-0.58);
+    expect(b10.x).toBeGreaterThan(0);
     expect(st.tray).not.toContain(10);
     // escolhe bola na mão
     const st2 = JSON.parse(JSON.stringify(r.state));

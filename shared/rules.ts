@@ -87,21 +87,23 @@ export function rackPositions(): BallPos[] {
 }
 
 /**
- * Guerra: posição inicial de cada bola. Olhando a mesa de pé (comprimento para cima), as azuis ficam na tabela da ESQUERDA
- * e as vermelhas na da DIREITA: 5 bolas coladas na tabela longa do seu lado e 2 no fundo (tabela curta do outro extremo),
- * uma cor de cada lado. Ids 1–7 azuis, 8–14 vermelhas; a 15 não é usada.
+ * Guerra: com a mesa imaginada na vertical, uma cor ocupa a metade de cima e a outra a de baixo (azuis no fim x<0,
+ * vermelhas no fim x>0). Cada cor: 3 coladas no fundo (tabela curta do seu fim) e 2 em cada tabela longa.
+ * Ids 1–7 azuis, 8–14 vermelhas; a 15 não é usada.
  */
-const GUERRA_LONG_X = [-0.95, -0.6, -0.25, 0.45, 0.85];
-const GUERRA_FOOT_Y = [0.17, 0.39];
+const GUERRA_LONG_X = [0.4, 0.8];
+const GUERRA_FOOT_Y = [0, 0.25, -0.25];
 
 export function guerraSlot(group: 'blue' | 'red', i: number): { x: number; y: number } {
-  const side = group === 'blue' ? 1 : -1;
-  if (i < GUERRA_LONG_X.length) return { x: GUERRA_LONG_X[i]!, y: side * (HW - BALL_R - 0.0004) };
-  return { x: HL - BALL_R - 0.0004, y: side * GUERRA_FOOT_Y[i - GUERRA_LONG_X.length]! };
+  const d = group === 'blue' ? -1 : 1;
+  const e = HW - BALL_R - 0.0004;
+  if (i < 3) return { x: d * (HL - BALL_R - 0.0004), y: GUERRA_FOOT_Y[i]! };
+  const k = i - 3;
+  return { x: d * GUERRA_LONG_X[k >> 1]!, y: k & 1 ? -e : e };
 }
 
 export function guerraPositions(): BallPos[] {
-  const out: BallPos[] = [{ id: 0, x: HEAD_X, y: 0, on: true }];
+  const out: BallPos[] = [{ id: 0, x: 0, y: 0, on: true }];
   for (let i = 0; i < 7; i++) {
     const bl = guerraSlot('blue', i);
     const rd = guerraSlot('red', i);
@@ -250,7 +252,7 @@ export function applyPenalty(s: MatchState, choice: 'hand' | 'revive'): { revive
   const yy = side * (HW - BALL_R - 0.0004);
   const cands: { x: number; y: number }[] = [guerraSlot(grp, idx)];
   for (let i = 0; i < 7; i++) cands.push(guerraSlot(grp, i));
-  for (let i = 0; i <= 40; i++) cands.push({ x: -HL + 0.25 + (i * (2 * HL - 0.5)) / 40, y: yy });
+  for (let i = 0; i <= 40; i++) cands.push({ x: (grp === 'blue' ? -1 : 1) * (0.25 + (i * (HL - 0.5)) / 40), y: yy });
   for (const c of cands) {
     if (free(s.balls, c.x, c.y, id)) {
       ball.x = c.x;
