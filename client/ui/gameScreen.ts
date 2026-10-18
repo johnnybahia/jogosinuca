@@ -664,7 +664,7 @@ export class GameScreen {
   }
 
   /** Câmera base: tira vista de cima/da mesa/zoom e volta ao enquadramento original. */
-  private baseCamera(): void {
+  private baseCamera(click = true): void {
     const c = this.view.cam;
     c.userDist = 1.05;
     c.userPitch = 0.5;
@@ -685,7 +685,7 @@ export class GameScreen {
     this.hud.setTableOn(false);
     this.hud.setZoomOn(false);
     this.hud.setButtons({ top: this.top, guide: loadPrefs().guide, muted: isMuted() });
-    sndClick();
+    if (click) sndClick();
   }
 
   private contact = false;
@@ -822,6 +822,7 @@ export class GameScreen {
     this.hud.setEnabled(false);
     this.hud.setHint('');
     this.hud.setPlacing(false);
+    this.baseCamera(false);
     const mine = e.by === this.mySeat;
     const ang = Math.atan2(e.shot.dy, e.shot.dx);
     if (!mine) {
