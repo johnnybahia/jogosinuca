@@ -80,7 +80,9 @@ export class Hud {
   private btnTable!: HTMLButtonElement;
   private btnContact!: HTMLButtonElement;
   private btnLow!: HTMLButtonElement;
-  private lowRange!: HTMLInputElement;
+  private lowVal = 0;
+  private lowKnob = h('div', { class: 'lowv-knob' });
+  private lowBox = h('div', { class: 'lowv', attrs: { title: 'Altura da câmera: arraste para baixo para chegar à linha do taco' } });
   private aimInfo = h('div', { class: 'aim-info' });
   private turnChip = h('div', { class: 'turn-chip' });
   private btnCam!: HTMLButtonElement;
@@ -125,19 +127,40 @@ export class Hud {
     this.btnContact = mk('🎯', 'Câmera de contato: de perto onde a branca vai bater', () => hd.onContact());
     this.btnLow = mk('👁', 'Câmera na linha do taco (rente à mesa): toque para alternar', () => {
       // vai até a linha do taco; se já estiver lá, volta à altura base
-      const down = Number(this.lowRange.value) < 95;
+      const down = this.lowVal < 0.95;
       this.setLow(down ? 1 : 0);
       hd.onLow(down ? 1 : 0);
     });
-    this.lowRange = h('input', { class: 'lowrange', attrs: { type: 'range', min: '0', max: '100', step: '1', value: '0', 'aria-label': 'Baixar a câmera até a linha do taco' } }) as HTMLInputElement;
-    this.lowRange.addEventListener('input', () => {
-      this.btnLow.classList.toggle('on', Number(this.lowRange.value) > 0);
-      hd.onLow(Number(this.lowRange.value) / 100);
-    });
+    // altura da câmera: controle vertical no canto (em cima = base, embaixo = linha do taco)
+    this.lowBox.append(h('div', { class: 'lowv-track' }), this.lowKnob);
+    {
+      let drag = false;
+      const val = (e: PointerEvent): number => {
+        const r = this.lowBox.getBoundingClientRect();
+        return Math.max(0, Math.min(1, (e.clientY - r.top - 8) / (r.height - 16)));
+      };
+      const set = (e: PointerEvent): void => {
+        const k = val(e);
+        this.setLow(k);
+        hd.onLow(k);
+      };
+      this.lowBox.addEventListener('pointerdown', (e) => {
+        drag = true;
+        this.lowBox.setPointerCapture(e.pointerId);
+        set(e);
+        e.preventDefault();
+      });
+      this.lowBox.addEventListener('pointermove', (e) => drag && set(e));
+      const end = (): void => {
+        drag = false;
+      };
+      this.lowBox.addEventListener('pointerup', end);
+      this.lowBox.addEventListener('pointercancel', end);
+    }
     const btnBase = mk('🎥', 'Câmera base: volta ao enquadramento original', () => hd.onBaseCam());
     // câmeras sempre visíveis ACIMA do menu; o menu (⋯) abre um painel ao lado, sem empurrar nada
     const panel = h('div', { class: 'tools-panel' }, this.btnView, this.btnTable, this.btnZoom, this.btnGuide, this.btnSound, this.btnHint, this.btnCam, this.btnMic, this.btnEmote, btnMenu);
-    const tools = h('div', { class: 'tools closed' }, h('div', { class: 'lowcam' }, h('span', { class: 'lowcam-l', text: 'altura' }), this.lowRange), h('div', { class: 'tools-cam' }, this.btnContact, btnBase, this.btnLow), h('div', { class: 'tools-menu' }, this.btnToggle, panel));
+    const tools = h('div', { class: 'tools closed' }, h('div', { class: 'tools-top' }, this.lowBox, this.btnLow), h('div', { class: 'tools-cam' }, this.btnContact, btnBase), h('div', { class: 'tools-menu' }, this.btnToggle, panel));
     this.tools = tools;
     this.setToolsOpen(loadPrefs().toolsOpen);
 
@@ -318,7 +341,8 @@ export class Hud {
 
   /** Atualiza o controle de altura (0..1) sem disparar o evento. */
   setLow(k: number): void {
-    this.lowRange.value = String(Math.round(k * 100));
+    this.lowVal = k;
+    this.lowKnob.style.top = `calc(8px + (100% - 16px) * ${k})`;
     this.btnLow.classList.toggle('on', k > 0);
   }
 

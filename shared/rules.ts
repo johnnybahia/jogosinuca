@@ -12,7 +12,8 @@ import { BALL_D, BALL_R, FOOT_X, HEAD_X, HL, HW } from './table';
 
 export type Mode = 'par_impar' | 'lisas_listradas' | 'bola61' | 'guerra';
 export type Group = 'even' | 'odd' | 'solid' | 'stripe' | 'red' | 'blue';
-export type InHand = 'none' | 'any' | 'head';
+/** 'choice' (Guerra): quem recebeu a falta ainda vai escolher entre bola na mão e ressuscitar uma bola sua. */
+export type InHand = 'none' | 'any' | 'head' | 'choice';
 
 export const MODES: { id: Mode; name: string; short: string; desc: string }[] = [
   { id: 'par_impar', name: 'Par ou Ímpar', short: 'Pares x Ímpares', desc: 'Sinuca brasileira: um fica com as bolas pares, o outro com as ímpares. A 8 só no final.' },
@@ -181,7 +182,7 @@ export function respot(balls: BallPos[], id: number): void {
 }
 
 export function placeCueLegal(s: MatchState, x: number, y: number): boolean {
-  if (s.inHand === 'none') return false;
+  if (s.inHand === 'none' || s.inHand === 'choice') return false;
   if (s.inHand === 'head' && x > HEAD_X) return false;
   return free(s.balls, x, y, 0);
 }
@@ -209,6 +210,43 @@ export function nearestFree(s: MatchState, x: number, y: number): { x: number; y
     if (free(s.balls, px, py, 0)) return { x: px, y: py };
   }
   return { x: px, y: py };
+}
+
+/** Guerra: bolas de `seat` que já saíram da mesa e podem ser ressuscitadas (a mais recente primeiro). */
+export function revivable(s: MatchState, seat: number): number[] {
+  const g = s.groups[seat];
+  if (s.mode !== 'guerra' || !g) return [];
+  return s.tray.filter((id) => groupOf('guerra', id) === g).reverse();
+}
+
+/** O que o jogador que recebe a falta ganha: escolha (se tiver bola para ressuscitar) ou bola na mão. */
+export const foulHand = (s: MatchState): InHand => (s.mode === 'guerra' && revivable(s, s.turn).length > 0 ? 'choice' : 'any');
+
+/** Guerra: aplica a escolha de quem recebeu a falta. 'revive' recoloca uma bola sua na tabela do seu lado; senão bola na mão. */
+export function applyPenalty(s: MatchState, choice: 'hand' | 'revive'): { revived: number | null } {
+  if (s.inHand !== 'choice') return { revived: null };
+  const list = revivable(s, s.turn);
+  if (choice !== 'revive' || list.length === 0) {
+    s.inHand = 'any';
+    return { revived: null };
+  }
+  const id = list[0]!;
+  const ball = s.balls.find((b) => b.id === id)!;
+  const yy = (s.turn === 0 ? -1 : 1) * (HW - BALL_R - 0.0004);
+  const span = HL - 0.2;
+  const slot = (id - (groupOf('guerra', id) === 'blue' ? 1 : 8)) * (2 * span) / 6 - span;
+  const xs = [slot, ...Array.from({ length: 41 }, (_, i) => -HL + BALL_R + (i * (2 * HL - 2 * BALL_R)) / 40).sort((a, b) => Math.abs(a - slot) - Math.abs(b - slot))];
+  for (const x of xs) {
+    if (free(s.balls, x, yy, id)) {
+      ball.x = x;
+      ball.y = yy;
+      ball.on = true;
+      break;
+    }
+  }
+  s.tray = s.tray.filter((t) => t !== id);
+  s.inHand = 'none';
+  return { revived: id };
 }
 
 /** Aplica o resultado da física ao estado e decide faltas, vez e fim de jogo. */
@@ -257,7 +295,7 @@ export function resolveShot(prev: MatchState, sim: Sim): { state: MatchState; ou
     s.score[opp] = 7 - myLeft;
     if (foul) {
       s.turn = opp;
-      s.inHand = 'any';
+      s.inHand = foulHand(s);
       out.message = mineP.length ? `${foul}. Fogo amigo` : foul;
     } else if (oppP.length > 0 && mineP.length === 0) {
       out.again = true;
@@ -379,8 +417,8 @@ export function resolveShot(prev: MatchState, sim: Sim): { state: MatchState; ou
     cue.on = true;
     cue.x = spot.x;
     cue.y = spot.y;
-    s.inHand = wasBreak ? 'head' : 'any';
-    const np = nearestFree({ ...s, inHand: s.inHand }, spot.x, spot.y);
+    if (s.inHand !== 'choice') s.inHand = wasBreak ? 'head' : 'any';
+    const np = nearestFree({ ...s, inHand: s.inHand === 'choice' ? 'any' : s.inHand }, spot.x, spot.y);
     cue.x = np.x;
     cue.y = np.y;
   }

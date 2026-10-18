@@ -10,7 +10,7 @@ import { FELTS } from '../game/tableView';
 import type { AimState, PoolView } from '../game/view';
 import { avatarColor, loadPrefs, loadStats, savePrefs, saveStats, type Profile } from '../store';
 import type { AimMsg, RoomView, ShotEvent } from '../../shared/protocol';
-import { MODES, groupName, groupOf, nearestFree, otherGroup, targets, type MatchState } from '../../shared/rules';
+import { MODES, groupName, groupOf, nearestFree, otherGroup, revivable, targets, type MatchState } from '../../shared/rules';
 import { getPwa, applyUpdate, onPwa } from '../pwa';
 import { qualityOptions } from './settings';
 import { LobbyPanel } from './lobby';
@@ -255,6 +255,7 @@ export class GameScreen {
     const prevSeq = this.lastSeq;
     this.v = v;
     this.view.setBallStyle(v.mode === 'guerra');
+    if (this.penaltyModal && v.match?.inHand !== 'choice') this.penaltyModal.close();
     this.refreshAssist();
     if (this.lobby) {
       if (v.phase === 'lobby') {
@@ -346,6 +347,17 @@ export class GameScreen {
       this.myTurnPrev = true;
       this.hud.setTurn('Sua vez', true);
       this.turnGame = String(v.gamesDone);
+      if (m.inHand === 'choice') {
+        // Guerra: o adversário errou; você escolhe a penalidade
+        this.phase = 'wait';
+        this.hud.setEnabled(false);
+        this.hud.setPlacing(false);
+        this.hud.setAimDeg(null);
+        this.view.setAim(null);
+        this.hud.setHint('');
+        this.askPenalty(m);
+        return;
+      }
       if (m.inHand !== 'none') {
         this.phase = 'place';
         const c = m.balls.find((b) => b.id === 0)!;
@@ -370,7 +382,7 @@ export class GameScreen {
       this.hud.setTurn(`Vez de ${oppName}`, false);
       // avisa quando a vez passa para o adversário e no começo de cada partida (as tacadas seguidas dele não repetem o aviso)
       const gameKey = String(v.gamesDone);
-      if (wasMine || this.turnGame !== gameKey) this.announceTurn(`Vez de ${oppName}`, m.inHand !== 'none' ? 'Bola na mão para ele' : 'Aguarde a jogada', 'wait', 1300);
+      if (wasMine || this.turnGame !== gameKey) this.announceTurn(`Vez de ${oppName}`, m.inHand === 'choice' ? 'Ele escolhe a penalidade' : m.inHand !== 'none' ? 'Bola na mão para ele' : 'Aguarde a jogada', 'wait', 1300);
       this.turnGame = gameKey;
       this.phase = 'wait';
       this.resetContact();
@@ -390,6 +402,33 @@ export class GameScreen {
       this.hud.setHint(opp ? `Vez de ${opp.name}…` : '');
     }
     this.hud.setButtons({ top: this.top, guide: loadPrefs().guide, muted: isMuted() });
+  }
+
+  private penaltyModal: { close(): void; el: HTMLElement } | null = null;
+
+  /** Guerra: quem recebeu a falta escolhe entre bola na mão e ressuscitar uma bola sua. */
+  private askPenalty(m: MatchState): void {
+    if (this.penaltyModal) return;
+    const n = revivable(m, m.turn).length;
+    let chose = false;
+    const pick = (c: 'hand' | 'revive'): void => {
+      chose = true;
+      this.penaltyModal?.close();
+      this.backend.penalty(c);
+    };
+    const box = h(
+      'div',
+      { class: 'panel menu-modal' },
+      h('h2', { text: 'Falta do adversário' }),
+      h('p', { class: 'muted', text: 'Escolha a penalidade:' }),
+      h('div', { class: 'row' }, btn('Bola na mão', () => pick('hand'), 'primary')),
+      h('div', { class: 'row' }, btn(`Ressuscitar uma bola sua (${n})`, () => pick('revive'))),
+    );
+    this.penaltyModal = modal(box, () => {
+      this.penaltyModal = null;
+      // fechou sem escolher (toque fora): pergunta de novo
+      if (!chose) window.setTimeout(() => this.match?.inHand === 'choice' && this.myTurn && this.askPenalty(this.match), 80);
+    });
   }
 
   /** Aviso de vez: espera o aviso do resultado da tacada terminar. */

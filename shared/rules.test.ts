@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { newMatch, resolveShot, legalFirstHit, targets, remaining, lowestOnTable, groupOf, rackPositions } from './rules';
+import { applyPenalty, revivable, newMatch, resolveShot, legalFirstHit, targets, remaining, lowestOnTable, groupOf, rackPositions } from './rules';
 import { Sim, strike, type Ball, newBall } from './physics';
 import { POCKETS } from './table';
 
@@ -235,5 +235,39 @@ describe('guerra', () => {
     r = resolveShot(s, sim);
     expect(r.out.over).toBe(true);
     expect(r.out.winner).toBe(1);
+  });
+
+  it('falta: quem recebe escolhe entre bola na mão e ressuscitar uma bola sua (se tiver)', () => {
+    // sem bola para ressuscitar: bola na mão direto
+    let s = start();
+    let sim = simFrom(s);
+    sim.firstHit = 3; // tocou na própria primeiro
+    let r = resolveShot(s, sim);
+    expect(r.state.inHand).toBe('any');
+    // o adversário (assento 1) já perdeu a 10: a falta dá a escolha
+    s = start();
+    s.tray = [10];
+    s.balls.find((b) => b.id === 10)!.on = false;
+    sim = simFrom(s);
+    sim.firstHit = 3;
+    r = resolveShot(s, sim);
+    expect(r.out.foul).not.toBeNull();
+    expect(r.state.turn).toBe(1);
+    expect(r.state.inHand).toBe('choice');
+    expect(revivable(r.state, 1)).toEqual([10]);
+    // escolhe ressuscitar: a 10 volta para a tabela do lado dele e a vez segue com ele
+    const st = JSON.parse(JSON.stringify(r.state));
+    const a = applyPenalty(st, 'revive');
+    expect(a.revived).toBe(10);
+    expect(st.inHand).toBe('none');
+    const b10 = st.balls.find((b: { id: number }) => b.id === 10);
+    expect(b10.on).toBe(true);
+    expect(b10.y).toBeGreaterThan(0.58);
+    expect(st.tray).not.toContain(10);
+    // escolhe bola na mão
+    const st2 = JSON.parse(JSON.stringify(r.state));
+    expect(applyPenalty(st2, 'hand').revived).toBeNull();
+    expect(st2.inHand).toBe('any');
+    expect(st2.balls.find((b: { id: number }) => b.id === 10).on).toBe(false);
   });
 });

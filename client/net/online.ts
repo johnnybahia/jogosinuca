@@ -121,6 +121,9 @@ export class OnlineBackend implements Backend {
   media(cam: boolean, mic: boolean): void {
     this.send({ t: 'media', cam, mic });
   }
+  penalty(choice: 'hand' | 'revive'): void {
+    this.send({ t: 'penalty', choice });
+  }
   assist(on: boolean): void {
     this.send({ t: 'assist', on });
   }

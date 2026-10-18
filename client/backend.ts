@@ -29,6 +29,8 @@ export interface Backend {
   media(cam: boolean, mic: boolean): void;
   /** pede/retira a mira completa (online: vale para os dois jogadores) */
   assist(on: boolean): void;
+  /** Guerra: escolha da penalidade depois de uma falta do adversário */
+  penalty(choice: 'hand' | 'revive'): void;
   rtc(to: string, data: unknown): void;
   emote(n: number): void;
   leave(): void;

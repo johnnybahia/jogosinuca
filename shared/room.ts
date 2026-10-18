@@ -20,7 +20,7 @@ import {
   type ShotMsg,
   type TurnSeconds,
 } from './protocol';
-import { cloneState, MODES, nearestFree, newMatch, resolveShot, type MatchState, type Mode, type ShotOutcome } from './rules';
+import { applyPenalty, cloneState, foulHand, MODES, nearestFree, newMatch, remaining, resolveShot, type MatchState, type Mode, type ShotOutcome } from './rules';
 
 export interface PlayerData {
   id: string;
@@ -266,6 +266,7 @@ export class RoomCore {
     if (![msg.dx, msg.dy, msg.v, msg.a, msg.b].every(finite)) return { error: 'Tacada inválida.' };
     const len = Math.sqrt(msg.dx * msg.dx + msg.dy * msg.dy);
     if (len < 0.5 || len > 1.5) return { error: 'Tacada inválida.' };
+    if (d.match.inHand === 'choice') return { error: 'Escolha primeiro a penalidade da falta.' };
     const start = cloneState(d.match);
     if (start.inHand !== 'none' && msg.cue && finite(msg.cue.x) && finite(msg.cue.y)) {
       const p = nearestFree(start, msg.cue.x, msg.cue.y);
@@ -300,6 +301,13 @@ export class RoomCore {
     const seat = d.match.turn;
     const p = this.player(seat);
     if (!p || p.bot) return null;
+    if (d.match.inHand === 'choice') {
+      // não escolheu a tempo: vale a bola na mão, sem falta
+      applyPenalty(d.match, 'hand');
+      d.shotSeq++;
+      this.armTimer(now, 0);
+      return { notice: `${p.name} demorou: bola na mão.` };
+    }
     d.timeouts[seat] = (d.timeouts[seat] ?? 0) + 1;
     if ((d.timeouts[seat] ?? 0) >= MAX_TIMEOUTS) {
       this.forfeit(seat, 'tempo esgotado 3 vezes', now);
@@ -307,11 +315,24 @@ export class RoomCore {
     }
     const m = d.match;
     m.turn = 1 - seat;
-    m.inHand = 'any';
+    m.inHand = foulHand(m);
     d.shotSeq++;
     d.last = { foul: 'Tempo esgotado', message: 'Tempo esgotado', again: false, potted: [], respotted: [], over: false, winner: -1, by: seat };
     this.armTimer(now, 0);
     return { notice: `${p.name} demorou: falta.` };
+  }
+
+  /** Guerra: quem recebeu a falta escolhe entre bola na mão e ressuscitar uma bola sua. */
+  penalty(by: string, choice: 'hand' | 'revive', now: number): { ok: boolean; revived?: number | null; error?: string } {
+    const d = this.d;
+    if (d.phase !== 'playing' || !d.match) return { ok: false, error: 'Sem partida em andamento.' };
+    const seat = this.seatOf(by);
+    if (seat < 0 || seat !== d.match.turn) return { ok: false, error: 'Não é a sua vez.' };
+    if (d.match.inHand !== 'choice') return { ok: false, error: 'Não há penalidade para escolher.' };
+    const r = applyPenalty(d.match, choice === 'revive' ? 'revive' : 'hand');
+    d.shotSeq++;
+    this.armTimer(now, 0);
+    return { ok: true, revived: r.revived };
   }
 
   /** Vez de um bot? */
@@ -325,6 +346,11 @@ export class RoomCore {
   planBot(rand?: () => number): { shot: ShotMsg } | null {
     const p = this.botTurn();
     if (!p || !this.d.match) return null;
+    // bot que recebeu falta na Guerra: ressuscita uma bola se estiver ficando sem, senão pega a bola na mão
+    if (this.d.match.inHand === 'choice') {
+      const left = remaining(this.d.match, this.d.match.turn);
+      applyPenalty(this.d.match, left <= 3 ? 'revive' : 'hand');
+    }
     const plan = botPlan(this.d.match, p.botLevel ?? 'normal', rand);
     return { shot: { ...plan.shot, cue: plan.cue } };
   }

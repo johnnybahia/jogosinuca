@@ -313,6 +313,12 @@ export class GameRoom implements DurableObject {
         this.broadcast();
         return;
       }
+      case 'penalty': {
+        const r = core.penalty(me, msg.choice === 'revive' ? 'revive' : 'hand', now);
+        if (!r.ok) return this.err(ws, r.error ?? 'Penalidade inválida.');
+        await this.after({ botExtra: 800 });
+        return;
+      }
       case 'assist': {
         if (core.assistBlocked()) {
           this.err(ws, 'Mira completa indisponível contra bot Difícil ou Mestre.');

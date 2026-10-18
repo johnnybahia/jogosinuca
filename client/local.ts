@@ -142,6 +142,11 @@ export class LocalBackend implements Backend {
   kick(): void {}
   media(): void {}
   assist(): void {}
+  penalty(choice: 'hand' | 'revive'): void {
+    const r = this.core.penalty(this.profile.id, choice, Date.now());
+    if (!r.ok) return void this.events.onError(r.error ?? 'Penalidade inválida.');
+    this.emit();
+  }
   rtc(): void {}
   emote(): void {}
   leave(): void {

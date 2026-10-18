@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { botPlan } from './bot';
+import { Sim } from './physics';
+import { resolveShot } from './rules';
 import { newRoom, RoomCore } from './room';
 
 describe('sala', () => {
@@ -35,8 +37,10 @@ describe('sala', () => {
     let now = 1000;
     let n = 0;
     while (core.d.phase === 'playing' && n < 400) {
-      const p = core.turnPlayer!;
-      const plan = p.bot ? core.planBot()! : { shot: { ...botPlan(core.d.match!, 'normal').shot } };
+      let p = core.turnPlayer!;
+      if (!p.bot && core.d.match!.inHand === 'choice') core.penalty(p.id, 'hand', now);
+      p = core.turnPlayer!;
+      const plan = p.bot ? core.planBot()! : { shot: { ...botPlan(core.d.match!, 'normal').shot, cue: botPlan(core.d.match!, 'normal').cue } };
       const r = core.shot(p.id, plan.shot, now);
       expect('error' in r).toBe(false);
       now += 8000;
@@ -48,6 +52,45 @@ describe('sala', () => {
     const bl = m.balls.filter((b) => b.on && b.id >= 1 && b.id <= 7).length;
     const rd = m.balls.filter((b) => b.on && b.id >= 8 && b.id <= 14).length;
     expect(bl === 0 || rd === 0).toBe(true);
+  });
+
+  it('guerra: depois da falta o jogador escolhe a penalidade; sem escolher não dá para tacar; o tempo esgotado vale bola na mão', () => {
+    const core = new RoomCore(newRoom('ABCDE', { mode: 'guerra', turnSeconds: 30 }));
+    core.join('u1', 'Ana');
+    core.join('u2', 'Beto');
+    expect(core.start('u1', 0)).toBe(true);
+    const m = core.d.match!;
+    // Beto (assento 1, vermelhas) já perdeu a 10; é a vez da Ana (assento 0) e ela faz falta
+    const seatU1 = core.seatOf('u1');
+    m.turn = seatU1;
+    const other = 1 - seatU1;
+    m.groups = other === 1 ? ['blue', 'red'] : ['red', 'blue'];
+    const oppGroupBall = m.groups[other] === 'red' ? 10 : 3;
+    m.tray = [oppGroupBall];
+    m.balls.find((b) => b.id === oppGroupBall)!.on = false;
+    const wrongFirst = m.groups[seatU1] === 'blue' ? 3 : 10; // bola dela mesma
+    const sim = Sim.from(m.balls);
+    sim.firstHit = wrongFirst;
+    const { state } = resolveShot(m, sim);
+    core.d.match = state;
+    expect(state.inHand).toBe('choice');
+    const next = core.turnPlayer!.id;
+    expect(next).toBe('u2');
+    const shot = core.shot('u2', { dx: 1, dy: 0, v: 2, a: 0, b: 0 }, 1000);
+    expect('error' in shot).toBe(true);
+    expect(core.penalty('u1', 'revive', 1000).ok).toBe(false);
+    const r = core.penalty('u2', 'revive', 1000);
+    expect(r.ok).toBe(true);
+    expect(r.revived).toBe(oppGroupBall);
+    expect(core.d.match!.inHand).toBe('none');
+    // tempo esgotado na escolha: bola na mão, sem falta
+    core.d.match!.inHand = 'choice';
+    core.d.match!.tray = [oppGroupBall];
+    core.d.turnEndsAt = 10;
+    const t = core.timeout(1_000_000);
+    expect(t).not.toBeNull();
+    expect(core.d.match!.inHand).toBe('any');
+    expect(core.d.timeouts[1]).toBe(0);
   });
 
   it('só o jogador da vez joga; tempo esgotado dá falta; 3 seguidas = derrota', () => {

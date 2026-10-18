@@ -101,6 +101,7 @@ export type ClientMsg =
   | { t: 'bot'; on: boolean; level: BotLevel }
   | { t: 'media'; cam: boolean; mic: boolean }
   | { t: 'assist'; on: boolean }
+  | { t: 'penalty'; choice: 'hand' | 'revive' }
   | { t: 'rtc'; to: string; data: unknown }
   | { t: 'emote'; n: number }
   | { t: 'leave' }
