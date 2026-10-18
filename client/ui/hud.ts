@@ -115,8 +115,9 @@ export class Hud {
     this.btnToggle = mk('⋯', 'Mostrar/esconder botões', () => this.setToolsOpen(this.tools.classList.contains('closed')));
     this.btnContact = mk('🎯', 'Câmera de contato: de perto onde a branca vai bater', () => hd.onContact());
     const btnBase = mk('🎥', 'Câmera base: volta ao enquadramento original', () => hd.onBaseCam());
-    for (const b of [this.btnView, this.btnTable, this.btnZoom, this.btnGuide, this.btnSound, this.btnHint, this.btnCam, this.btnMic, this.btnEmote, btnMenu]) b.classList.add('tx');
-    const tools = h('div', { class: 'tools closed' }, this.btnToggle, btnBase, this.btnContact, this.btnView, this.btnTable, this.btnZoom, this.btnGuide, this.btnSound, this.btnHint, this.btnCam, this.btnMic, this.btnEmote, btnMenu);
+    // câmeras sempre visíveis ACIMA do menu; o menu (⋯) abre um painel ao lado, sem empurrar nada
+    const panel = h('div', { class: 'tools-panel' }, this.btnView, this.btnTable, this.btnZoom, this.btnGuide, this.btnSound, this.btnHint, this.btnCam, this.btnMic, this.btnEmote, btnMenu);
+    const tools = h('div', { class: 'tools closed' }, h('div', { class: 'tools-cam' }, this.btnContact, btnBase), h('div', { class: 'tools-menu' }, this.btnToggle, panel));
     this.tools = tools;
     this.setToolsOpen(loadPrefs().toolsOpen);
 

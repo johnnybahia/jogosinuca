@@ -158,9 +158,11 @@ input { font: inherit; }
 .ball.potted { opacity: 0.28; filter: grayscale(0.7); }
 .left-row { display: flex; flex-wrap: wrap; gap: 3px; }
 
-.tools { position: absolute; left: calc(var(--sal) + 14px); bottom: calc(var(--sab) + 184px); display: grid; grid-template-columns: repeat(2, auto); gap: 8px; pointer-events: auto; }
-.tools.closed .tx { display: none; }
-.tools { grid-template-columns: repeat(3, auto); }
+.tools { position: absolute; left: calc(var(--sal) + 14px); bottom: calc(var(--sab) + 196px); display: flex; flex-direction: column; gap: 8px; pointer-events: auto; }
+.tools.closed .tools-panel { display: none; }
+.tools-cam { display: flex; gap: 8px; }
+.tools-menu { position: relative; }
+.tools-panel { position: absolute; left: calc(100% + 8px); bottom: 0; display: grid; grid-template-columns: repeat(3, auto); gap: 8px; padding: 8px; border-radius: 14px; background: rgba(8, 10, 14, 0.78); border: 1px solid var(--line); }
 .ibtn { appearance: none; width: 42px; height: 42px; border-radius: 12px; border: 1px solid var(--line); background: rgba(10, 13, 18, 0.78); color: var(--ink); font-size: 1.15rem; cursor: pointer; touch-action: manipulation; pointer-events: auto; }
 .ibtn.on { border-color: var(--gold); color: var(--gold); }
 .ibtn.off { color: var(--danger); }
@@ -231,7 +233,7 @@ input { font: inherit; }
 .res-row.win { background: rgba(230, 195, 92, 0.14); border: 1px solid rgba(230, 195, 92, 0.35); }
 
 @media (max-height: 520px) {
-  .tools { bottom: calc(var(--sab) + 160px); }
+  .tools { bottom: calc(var(--sab) + 172px); }
   .ibtn { width: 36px; height: 36px; font-size: 1rem; }
   .logo-t1 { font-size: 1.5rem; }
   .menu-col { gap: 10px; }
