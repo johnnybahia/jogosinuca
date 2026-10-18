@@ -62,6 +62,7 @@ export interface OfflineSettings {
   mode: Mode;
   level: BotLevel;
   turnSeconds: TurnSeconds;
+  color: 'blue' | 'red';
 }
 export function loadOfflineSettings(): OfflineSettings {
   try {
@@ -70,9 +71,10 @@ export function loadOfflineSettings(): OfflineSettings {
       mode: MODES.some((m) => m.id === s.mode) ? (s.mode as Mode) : 'par_impar',
       level: BOT_LEVELS.includes(s.level as BotLevel) ? (s.level as BotLevel) : 'normal',
       turnSeconds: (TURN_SECONDS_OPTIONS as readonly number[]).includes(s.turnSeconds as number) ? (s.turnSeconds as TurnSeconds) : 0,
+      color: s.color === 'red' ? 'red' : 'blue',
     };
   } catch {
-    return { mode: 'par_impar', level: 'normal', turnSeconds: 0 };
+    return { mode: 'par_impar', level: 'normal', turnSeconds: 0, color: 'blue' };
   }
 }
 export function saveOfflineSettings(s: OfflineSettings): void {

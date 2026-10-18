@@ -138,3 +138,16 @@ describe('mira completa', () => {
     expect(facil.view('u1', 0, () => true, {}, (x) => x, { u1: true }).assist).toBe(true);
   });
 });
+
+describe('guerra: cor do anfitrião', () => {
+  it('anfitrião escolhe vermelhas e o bot fica com azuis', () => {
+    const core = new RoomCore(newRoom('C', { mode: 'guerra', turnSeconds: 0 }));
+    core.join('p', 'P');
+    core.setBot('p', true, 'normal');
+    core.setSettings('p', { hostColor: 'red' });
+    core.start('p', Date.now());
+    const m = core.d.match!;
+    expect(m.groups[core.seatOf('p')]).toBe('red');
+    expect(m.groups[1 - core.seatOf('p')]).toBe('blue');
+  });
+});

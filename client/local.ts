@@ -19,6 +19,7 @@ export class LocalBackend implements Backend {
   constructor(private profile: Profile, cfg: OfflineSettings, private practice = false) {
     this.core = new RoomCore(newRoom('LOCAL', { mode: practice ? 'par_impar' : cfg.mode, turnSeconds: practice ? 0 : cfg.turnSeconds }));
     this.core.d.practice = practice;
+    this.core.d.hostColor = cfg.color;
     this.core.join(profile.id, profile.name);
     this.core.setBot(profile.id, true, practice ? 'facil' : cfg.level);
     if (practice) {
@@ -120,7 +121,7 @@ export class LocalBackend implements Backend {
       this.scheduleBot(600);
     }
   }
-  settings(opts: { mode?: Mode; turnSeconds?: TurnSeconds; bestOf?: BestOf }): void {
+  settings(opts: { mode?: Mode; turnSeconds?: TurnSeconds; bestOf?: BestOf; hostColor?: 'blue' | 'red' }): void {
     if (this.core.setSettings(this.profile.id, opts)) this.emit();
   }
   shot(msg: ShotMsg): void {

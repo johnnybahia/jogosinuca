@@ -56,6 +56,7 @@ export interface RoomView {
   mode: Mode;
   turnSeconds: TurnSeconds;
   bestOf: BestOf;
+  hostColor: 'blue' | 'red';
   isPublic: boolean;
   you: string;
   /** mira completa ligada para a sala: vale para os dois assim que um deles ativa (nunca contra bot Difícil/Mestre) */
@@ -93,7 +94,7 @@ export interface AimMsg {
 export type ClientMsg =
   | { t: 'join'; id: string; name: string; photo?: string }
   | { t: 'start' }
-  | { t: 'settings'; mode?: Mode; turnSeconds?: TurnSeconds; bestOf?: BestOf }
+  | { t: 'settings'; mode?: Mode; turnSeconds?: TurnSeconds; bestOf?: BestOf; hostColor?: 'blue' | 'red' }
   | ({ t: 'shot' } & ShotMsg)
   | ({ t: 'aim' } & AimMsg)
   | { t: 'next' }

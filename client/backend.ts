@@ -20,7 +20,7 @@ export interface Backend {
   events: BackendEvents;
   connect(): void;
   start(): void;
-  settings(opts: { mode?: Mode; turnSeconds?: TurnSeconds; bestOf?: BestOf }): void;
+  settings(opts: { mode?: Mode; turnSeconds?: TurnSeconds; bestOf?: BestOf; hostColor?: 'blue' | 'red' }): void;
   shot(msg: ShotMsg): void;
   aim(a: AimMsg): void;
   next(): void;

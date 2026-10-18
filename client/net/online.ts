@@ -100,7 +100,7 @@ export class OnlineBackend implements Backend {
   start(): void {
     this.send({ t: 'start' });
   }
-  settings(opts: { mode?: Mode; turnSeconds?: TurnSeconds; bestOf?: BestOf }): void {
+  settings(opts: { mode?: Mode; turnSeconds?: TurnSeconds; bestOf?: BestOf; hostColor?: 'blue' | 'red' }): void {
     this.send({ t: 'settings', ...opts });
   }
   shot(msg: ShotMsg): void {

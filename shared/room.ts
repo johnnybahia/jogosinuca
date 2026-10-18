@@ -39,6 +39,8 @@ export interface RoomData {
   mode: Mode;
   turnSeconds: TurnSeconds;
   bestOf: BestOf;
+  /** Guerra: cor do anfitrião */
+  hostColor?: 'blue' | 'red';
   isPublic: boolean;
   phase: 'lobby' | 'playing' | 'ended';
   players: PlayerData[];
@@ -113,7 +115,7 @@ export class RoomCore {
     const d = this.d;
     const players: RoomPlayer[] = d.players.map((p) => ({ id: pub(p.id), name: p.name, seat: p.seat, connected: p.bot || connected(p.id), isHost: p.id === d.hostId, bot: p.bot, botLevel: p.botLevel, left: p.left, wins: p.wins, title: p.title, cam: !!media[p.id]?.cam, mic: !!media[p.id]?.mic, assist: !!assist[p.id] }));
     const assistOn = !this.assistBlocked() && d.players.some((p) => !p.bot && !!assist[p.id]);
-    return { t: 'state', assist: assistOn, code: d.code, phase: d.phase, hostId: pub(d.hostId), mode: d.mode, turnSeconds: d.turnSeconds, bestOf: d.bestOf, isPublic: d.isPublic, you: pub(forId), players, match: d.match, shotSeq: d.shotSeq, turnEndsAt: d.turnEndsAt, serverNow: now, gamesDone: d.gamesDone, practice: d.practice, result: d.result, last: d.last };
+    return { t: 'state', assist: assistOn, code: d.code, phase: d.phase, hostId: pub(d.hostId), mode: d.mode, turnSeconds: d.turnSeconds, bestOf: d.bestOf, hostColor: d.hostColor ?? 'blue', isPublic: d.isPublic, you: pub(forId), players, match: d.match, shotSeq: d.shotSeq, turnEndsAt: d.turnEndsAt, serverNow: now, gamesDone: d.gamesDone, practice: d.practice, result: d.result, last: d.last };
   }
 
   // ---------- saguão
@@ -156,11 +158,12 @@ export class RoomCore {
     if (d.phase === 'playing') this.forfeit(p.seat, 'abandono', now);
   }
 
-  setSettings(by: string, s: { mode?: Mode; turnSeconds?: number; bestOf?: number }): boolean {
+  setSettings(by: string, s: { mode?: Mode; turnSeconds?: number; bestOf?: number; hostColor?: string }): boolean {
     const d = this.d;
     if (by !== d.hostId || (d.phase !== 'lobby' && d.phase !== 'ended')) return false;
     if (s.mode && MODES.some((m) => m.id === s.mode)) d.mode = s.mode;
     if (finite(s.turnSeconds) && (TURN_SECONDS_OPTIONS as readonly number[]).includes(s.turnSeconds)) d.turnSeconds = s.turnSeconds as TurnSeconds;
+    if (s.hostColor === 'blue' || s.hostColor === 'red') d.hostColor = s.hostColor;
     if (finite(s.bestOf) && (BEST_OF_OPTIONS as readonly number[]).includes(s.bestOf) && d.phase === 'lobby') d.bestOf = s.bestOf as BestOf;
     return true;
   }
@@ -223,6 +226,11 @@ export class RoomCore {
     const d = this.d;
     d.phase = 'playing';
     d.match = newMatch(d.mode, d.breaker);
+    if (d.mode === 'guerra') {
+      const hs = this.seatOf(d.hostId);
+      const hc = d.hostColor ?? 'blue';
+      if (hs === 0 || hs === 1) d.match.groups = hs === 0 ? [hc, hc === 'blue' ? 'red' : 'blue'] : [hc === 'blue' ? 'red' : 'blue', hc];
+    }
     d.result = undefined;
     d.last = undefined;
     d.shotSeq = 0;

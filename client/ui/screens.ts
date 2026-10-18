@@ -140,8 +140,11 @@ export function showSettings(a: { setQuality(q: ReturnType<typeof loadPrefs>['qu
 function showSetup(a: MenuActions): void {
   const cfg = loadOfflineSettings();
   const modeBox = h('div', { class: 'modes' });
+  const colorBox = h('div', { class: 'color-opt' });
   const renderModes = (): void => {
     clear(modeBox);
+    clear(colorBox);
+    if (cfg.mode === 'guerra') colorBox.append(h('div', { class: 'setting' }, h('span', { text: 'Sua cor' }), segmented([{ value: 'blue', label: '🔵 Azuis' }, { value: 'red', label: '🔴 Vermelhas' }], cfg.color, (v) => { cfg.color = v as 'blue' | 'red'; })));
     for (const mo of MODES) {
       modeBox.append(
         h('button', { class: `mode-card${cfg.mode === mo.id ? ' active' : ''}`, attrs: { type: 'button' }, on: { click: () => { cfg.mode = mo.id; sndClick(); renderModes(); } } }, h('div', { class: 'mode-name', text: mo.name }), h('div', { class: 'mode-desc', text: mo.desc })),
@@ -159,6 +162,7 @@ function showSetup(a: MenuActions): void {
     { class: 'panel setup' },
     h('h2', { text: 'Jogar contra o computador' }),
     modeBox,
+    colorBox,
     h('div', { class: 'setting' }, h('span', { text: 'Adversário' }), segmented(BOT_LEVELS.map((l) => ({ value: l, label: lvl(l) })), cfg.level, (v) => { cfg.level = v; })),
     h('div', { class: 'muted small', text: 'Fácil: ' + BOT_NAMES.facil + ' · Normal: ' + BOT_NAMES.normal + ' · Difícil: ' + BOT_NAMES.dificil + ' · Mestre: ' + BOT_NAMES.mestre }),
     h('div', { class: 'setting' }, h('span', { text: 'Tempo por tacada' }), segmented(TURN_SECONDS_OPTIONS.map((s) => ({ value: s as number, label: turnLabel(s) })), cfg.turnSeconds as number, (v) => { cfg.turnSeconds = v as TurnSeconds; })),

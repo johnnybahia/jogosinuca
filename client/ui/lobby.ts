@@ -43,13 +43,14 @@ export class LobbyPanel {
           'div',
           { class: 'lobby-settings' },
           h('div', { class: 'setting' }, h('span', { text: 'Modo' }), segmented(MODES.map((m) => ({ value: m.id as Mode, label: m.name })), v.mode, (m) => this.backend.settings({ mode: m }))),
+          ...(v.mode === 'guerra' ? [h('div', { class: 'setting' }, h('span', { text: 'Sua cor' }), segmented([{ value: 'blue', label: '🔵 Azuis' }, { value: 'red', label: '🔴 Vermelhas' }], v.hostColor, (c) => this.backend.settings({ hostColor: c as 'blue' | 'red' })))] : []),
           h('div', { class: 'setting' }, h('span', { text: 'Tempo por tacada' }), segmented(TURN_SECONDS_OPTIONS.map((s) => ({ value: s as number, label: turnLabel(s) })), v.turnSeconds as number, (s) => this.backend.settings({ turnSeconds: s as TurnSeconds }))),
           h('div', { class: 'setting' }, h('span', { text: 'Partidas' }), segmented(BEST_OF_OPTIONS.map((b) => ({ value: b as number, label: b === 1 ? 'Única' : `Melhor de ${b}` })), v.bestOf as number, (b) => this.backend.settings({ bestOf: b as BestOf }))),
           v.players.length < 2 || hasBot
             ? h('div', { class: 'setting' }, h('span', { text: 'Jogar contra bot' }), h('div', { class: 'row tight' }, segmented(BOT_LEVELS.map((l) => ({ value: l, label: BOT_LABEL[l] })), this.botLevel, (l) => { this.botLevel = l; if (hasBot) this.backend.bot(true, l); }), hasBot ? btn('Tirar bot', () => this.backend.bot(false, this.botLevel), 'ghost small') : btn('Adicionar bot', () => this.backend.bot(true, this.botLevel), 'small')))
             : null,
         )
-      : h('div', { class: 'lobby-settings muted' }, h('div', { text: `Modo: ${modeLabel}` }), h('div', { text: `Tempo por tacada: ${turnLabel(v.turnSeconds)} · ${v.bestOf === 1 ? 'partida única' : `melhor de ${v.bestOf}`}` }), h('div', { text: 'O anfitrião escolhe os ajustes e começa a partida.' }));
+      : h('div', { class: 'lobby-settings muted' }, h('div', { text: `Modo: ${modeLabel}${v.mode === 'guerra' ? (v.hostColor === 'blue' ? ' · anfitrião: azuis' : ' · anfitrião: vermelhas') : ''}` }), h('div', { text: `Tempo por tacada: ${turnLabel(v.turnSeconds)} · ${v.bestOf === 1 ? 'partida única' : `melhor de ${v.bestOf}`}` }), h('div', { text: 'O anfitrião escolhe os ajustes e começa a partida.' }));
     const canStart = v.players.length === 2 && v.players.every((p) => p.connected);
     const box = h(
       'div',
