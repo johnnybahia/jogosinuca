@@ -1103,6 +1103,7 @@ export class GameScreen {
       { class: `panel result ${won ? 'won' : 'lost'}` },
       h('div', { class: 'res-title', text: won ? 'Você venceu!' : `${winner?.name ?? 'Adversário'} venceu` }),
       h('div', { class: 'res-sub', text: v.result.reason }),
+      ...(v.mode === 'guerra' ? [h('div', { class: 'res-beer', text: won ? `🍺 ${v.players.find((p) => p.seat !== v.result!.winner)?.name ?? 'O adversário'} te deve uma cerveja!` : `🍺 Pague uma cerveja a ${winner?.name ?? 'seu adversário'}!` })] : []),
       h('div', { class: 'res-rows' }, ...rows),
       h('div', { class: 'row' }, ...actions),
     );
