@@ -121,6 +121,60 @@ function speedFor(c: Cand): number {
   return Math.min(MAX_SPEED * 0.85, Math.max(0.9, v0));
 }
 
+
+/** Primeira bola que a branca toca seguindo a direção (dx,dy); -1 se não toca em nenhuma. */
+function firstHit(balls: BallPos[], cue: { x: number; y: number }, dx: number, dy: number): number {
+  let best = -1;
+  let bt = Infinity;
+  for (const o of balls) {
+    if (!o.on || o.id === 0) continue;
+    const rx = o.x - cue.x;
+    const ry = o.y - cue.y;
+    const t = rx * dx + ry * dy;
+    if (t <= 0) continue;
+    const perp2 = rx * rx + ry * ry - t * t;
+    if (perp2 >= BALL_D * BALL_D) continue;
+    const hit = t - Math.sqrt(BALL_D * BALL_D - perp2);
+    if (hit < bt) {
+      bt = hit;
+      best = o.id;
+    }
+  }
+  return best;
+}
+
+/** Se a tacada escolhida tocaria primeiro numa bola proibida, troca por uma direção que toque numa bola legal. */
+function fixFirstHit(balls: BallPos[], tgt: number[], cue: { x: number; y: number }, c: { dx: number; dy: number; v: number; a: number; b: number }, margin: number): { dx: number; dy: number; v: number; a: number; b: number } {
+  const legalAt = (a: number): boolean => [-margin, 0, margin].every((m) => tgt.includes(firstHit(balls, cue, Math.cos(a + m), Math.sin(a + m))));
+  if (tgt.length === 0 || legalAt(Math.atan2(c.dy, c.dx))) return c;
+  const N = 720;
+  const ok: boolean[] = [];
+  const ang0 = Math.atan2(c.dy, c.dx);
+  for (let i = 0; i < N; i++) {
+    const a = (i * 2 * Math.PI) / N;
+    ok.push(legalAt(a));
+  }
+  let bestI = -1;
+  let bestScore = -Infinity;
+  for (let i = 0; i < N; i++) {
+    if (!ok[i]) continue;
+    // folga: quantos passos legais seguidos de cada lado
+    let w = 0;
+    while (w < 12 && ok[(i + w + 1) % N] && ok[(i - w - 1 + N) % N]) w++;
+    const a = (i * 2 * Math.PI) / N;
+    let d = Math.abs(a - ang0);
+    d = Math.min(d, 2 * Math.PI - d);
+    const sc = Math.min(w, 5) * 2 - d;
+    if (sc > bestScore) {
+      bestScore = sc;
+      bestI = i;
+    }
+  }
+  if (bestI < 0) return c;
+  const a = (bestI * 2 * Math.PI) / N;
+  return { dx: Math.cos(a), dy: Math.sin(a), v: Math.min(c.v, 2.2), a: 0, b: 0 };
+}
+
 const toSim = (balls: BallPos[]): Sim => Sim.from(balls);
 
 interface Plan {
@@ -279,6 +333,7 @@ export function botPlan(state: MatchState, level: BotLevel, rnd: Rnd = Math.rand
     dy /= l;
     chosen = { dx, dy, v: Math.min(3.2, 1.3 + l * 1.5), a: 0, b: 0 };
   }
+  chosen = fixFirstHit(balls, tgt, cue, chosen, Math.max(0.002, cfg.angleSigma * 2.5));
   // erro humano
   const ang = Math.atan2(chosen.dy, chosen.dx) + gauss(rnd) * cfg.angleSigma;
   const v = chosen.v * (1 + gauss(rnd) * cfg.powerSigma);

@@ -18,7 +18,7 @@ export type InHand = 'none' | 'any' | 'head' | 'choice';
 export const MODES: { id: Mode; name: string; short: string; desc: string }[] = [
   { id: 'par_impar', name: 'Par ou Ímpar', short: 'Pares x Ímpares', desc: 'Sinuca brasileira: um fica com as bolas pares, o outro com as ímpares. A 8 só no final.' },
   { id: 'lisas_listradas', name: 'Lisas x Listradas', short: 'Bola 8', desc: 'Bola 8 clássica: 1–7 lisas contra 9–15 listradas. A 8 só no final.' },
-  { id: 'guerra', name: 'Guerra', short: 'Azuis x Vermelhas', desc: 'Jogo de bar: 7 bolas azuis contra 7 vermelhas coladas nas tabelas. Derrube as do adversário; as suas, nunca. Toque sempre primeiro numa bola dele.' },
+  { id: 'guerra', name: 'Sinuca de boteco valendo a 🍺', short: 'Azuis x Vermelhas', desc: 'Brincadeira de boteco: 7 bolas azuis contra 7 vermelhas coladas nas tabelas. Derrube as do adversário; as suas, nunca. Toque sempre primeiro numa bola dele.' },
   { id: 'bola61', name: 'Bola 61', short: '61 pontos', desc: 'Cada bola vale o seu número. Toque sempre na menor da mesa. Quem chegar a 61 vence.' },
 ];
 
