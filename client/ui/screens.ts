@@ -108,7 +108,7 @@ function showHelp(): void {
     h('h3', { text: 'Modos' }),
     h('ul', null, ...MODES.map((m) => h('li', null, h('b', { text: `${m.name}: ` }), m.desc))),
     h('h3', { text: 'Falta' }),
-    h('p', { class: 'muted', text: 'Branca na caçapa, não tocar em nenhuma bola, tocar primeiro na bola errada ou nenhuma bola chegar à tabela. Quem sofre a falta joga com a branca na mão (coloca onde quiser).' }),
+    h('p', { class: 'muted', text: 'Branca na caçapa, não tocar em nenhuma bola ou tocar primeiro na bola errada. Quem sofre a falta joga com a branca na mão (coloca onde quiser). Na Guerra, tocar primeiro numa bola sua é falta e bola sua na caçapa (fogo amigo) fica contra você; quem ficar sem bolas perde.' }),
     btn('Entendi', () => m.close(), 'primary'),
   );
   const m = modal(box);

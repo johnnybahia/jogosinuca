@@ -151,3 +151,89 @@ describe('regras', () => {
     expect(state.breakShot).toBe(false);
   });
 });
+
+describe('guerra', () => {
+  const start = () => {
+    const s = newMatch('guerra', 0);
+    s.balls = JSON.parse(JSON.stringify(s.balls));
+    return s;
+  };
+  it('7 azuis e 7 vermelhas coladas nas tabelas longas, branca na casa, a 15 fora', () => {
+    const s = start();
+    const on = s.balls.filter((b) => b.on && b.id > 0);
+    expect(on.length).toBe(14);
+    expect(s.balls.find((b) => b.id === 15)!.on).toBe(false);
+    expect(s.groups).toEqual(['blue', 'red']);
+    for (const b of on) expect(Math.abs(b.y)).toBeGreaterThan(0.58);
+    expect(on.filter((b) => groupOf('guerra', b.id) === 'blue').every((b) => b.y < 0)).toBe(true);
+    expect(on.filter((b) => groupOf('guerra', b.id) === 'red').every((b) => b.y > 0)).toBe(true);
+    // só bolas do adversário são alvo legal
+    expect(targets(s).every((id) => groupOf('guerra', id) === 'red')).toBe(true);
+    expect(legalFirstHit(s, 3)).toBe(false);
+    expect(legalFirstHit(s, 10)).toBe(true);
+    expect(remaining(s, 0)).toBe(7);
+  });
+
+  it('derrubar bola do adversário limpa continua a vez; bola sua (fogo amigo) passa a vez', () => {
+    let s = start();
+    let sim = simFrom(s);
+    sim.firstHit = 10;
+    sim.balls[10]!.on = false;
+    sim.pocketed.push({ id: 10, p: 0 });
+    let r = resolveShot(s, sim);
+    expect(r.out.foul).toBeNull();
+    expect(r.out.again).toBe(true);
+    expect(r.state.turn).toBe(0);
+    expect(r.state.score[0]).toBe(1);
+    s = start();
+    sim = simFrom(s);
+    sim.firstHit = 10;
+    sim.balls[2]!.on = false;
+    sim.pocketed.push({ id: 2, p: 0 });
+    r = resolveShot(s, sim);
+    expect(r.out.again).toBe(false);
+    expect(r.state.turn).toBe(1);
+    expect(r.state.tray).toContain(2);
+    expect(r.state.balls.find((b) => b.id === 2)!.on).toBe(false);
+    expect(r.state.score[1]).toBe(1);
+  });
+
+  it('tocar primeiro na bola sua é falta (bola na mão); branca na caçapa também', () => {
+    const s = start();
+    let sim = simFrom(s);
+    sim.firstHit = 3;
+    let r = resolveShot(s, sim);
+    expect(r.out.foul).toMatch(/sua/);
+    expect(r.state.turn).toBe(1);
+    expect(r.state.inHand).toBe('any');
+    sim = simFrom(s);
+    sim.firstHit = 10;
+    sim.balls[0]!.on = false;
+    sim.pocketed.push({ id: 0, p: 2 });
+    r = resolveShot(s, sim);
+    expect(r.out.foul).toMatch(/branca/i);
+    expect(r.state.inHand).toBe('any');
+    expect(r.state.balls.find((b) => b.id === 0)!.on).toBe(true);
+  });
+
+  it('vence quem limpar o lado do adversário; quem ficar sem bolas perde (até por fogo amigo)', () => {
+    let s = start();
+    for (const b of s.balls) if (b.id >= 8 && b.id <= 14 && b.id !== 14) b.on = false; // adversário só com a 14
+    let sim = simFrom(s);
+    sim.firstHit = 14;
+    sim.balls[14]!.on = false;
+    sim.pocketed.push({ id: 14, p: 1 });
+    let r = resolveShot(s, sim);
+    expect(r.out.over).toBe(true);
+    expect(r.out.winner).toBe(0);
+    s = start();
+    for (const b of s.balls) if (b.id >= 1 && b.id <= 7 && b.id !== 7) b.on = false; // eu só com a 7
+    sim = simFrom(s);
+    sim.firstHit = 10;
+    sim.balls[7]!.on = false; // derrubei a minha última
+    sim.pocketed.push({ id: 7, p: 1 });
+    r = resolveShot(s, sim);
+    expect(r.out.over).toBe(true);
+    expect(r.out.winner).toBe(1);
+  });
+});

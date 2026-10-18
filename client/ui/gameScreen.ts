@@ -10,7 +10,7 @@ import { FELTS } from '../game/tableView';
 import type { AimState, PoolView } from '../game/view';
 import { avatarColor, loadPrefs, loadStats, savePrefs, saveStats, type Profile } from '../store';
 import type { AimMsg, RoomView, ShotEvent } from '../../shared/protocol';
-import { MODES, groupName, groupOf, nearestFree, targets, type MatchState } from '../../shared/rules';
+import { MODES, groupName, groupOf, nearestFree, otherGroup, targets, type MatchState } from '../../shared/rules';
 import { getPwa, applyUpdate, onPwa } from '../pwa';
 import { qualityOptions } from './settings';
 import { LobbyPanel } from './lobby';
@@ -254,6 +254,7 @@ export class GameScreen {
   private apply(v: RoomView, afterShot: boolean): void {
     const prevSeq = this.lastSeq;
     this.v = v;
+    this.view.setBallStyle(v.mode === 'guerra');
     this.refreshAssist();
     if (this.lobby) {
       if (v.phase === 'lobby') {
@@ -320,6 +321,10 @@ export class GameScreen {
       if (m.mode === 'bola61') {
         const low = m.balls.filter((b) => b.on && b.id > 0).map((b) => b.id);
         if (low.length) ids.add(Math.min(...low));
+      } else if (m.mode === 'guerra') {
+        // Guerra: o anel marca as SUAS bolas (as que você não pode derrubar)
+        const g = m.groups[me];
+        if (g) for (const b of m.balls) if (b.on && b.id > 0 && groupOf('guerra', b.id) === g) ids.add(b.id);
       } else {
         const g = m.groups[me];
         if (g) {
@@ -445,7 +450,7 @@ export class GameScreen {
       sndTurn();
       const mode = MODES.find((x) => x.id === this.v!.mode);
       const g = m.groups[m.turn];
-      this.announceTurn('Sua vez', mode?.id === 'bola61' ? `Toque na bola ${[...targets(m)][0] ?? ''}` : g ? `Você joga com as ${groupName(g).toLowerCase()}` : 'Mesa aberta', 'info');
+      this.announceTurn('Sua vez', mode?.id === 'bola61' ? `Toque na bola ${[...targets(m)][0] ?? ''}` : mode?.id === 'guerra' && g ? `Derrube as ${groupName(otherGroup(g)).toLowerCase()} · não toque nas suas` : g ? `Você joga com as ${groupName(g).toLowerCase()}` : 'Mesa aberta', 'info');
     }
     this.placed = null;
   }
@@ -838,6 +843,9 @@ export class GameScreen {
     } else if (out.potted.length && out.again) {
       banner(out.potted.length > 1 ? `${out.potted.length} bolas!` : 'Caçapa!', mine ? 'Continue jogando' : `${who} continua`, mine ? 'good' : 'info', 1700);
       if (mine) this.buzz(35);
+    } else if (out.potted.length && this.v?.mode === 'guerra') {
+      banner(mine ? 'Fogo amigo' : 'Fogo amigo dele', mine ? `Bola sua na caçapa · vez de ${other}` : 'Sua vez', mine ? 'bad' : 'good', 1900);
+      if (mine) this.streak = 0;
     } else if (out.potted.length) {
       // derrubou, mas a vez passa (bola do adversário)
       banner(mine ? 'Bola do adversário' : 'Bola sua', mine ? `Vez de ${other}` : 'Sua vez', mine ? 'info' : 'good', 1700);

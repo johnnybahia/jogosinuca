@@ -43,10 +43,32 @@ function blobTexture(): THREE.CanvasTexture {
   return t;
 }
 
+/** Bola lisa de uma cor com duas pintinhas brancas opostas (para o giro aparecer na tela). */
+function guerraMaterial(color: string): THREE.MeshPhysicalMaterial {
+  const c = document.createElement('canvas');
+  c.width = 256;
+  c.height = 128;
+  const g = c.getContext('2d')!;
+  g.fillStyle = color;
+  g.fillRect(0, 0, 256, 128);
+  g.fillStyle = '#f4f1e8';
+  for (const x of [64, 192]) {
+    g.beginPath();
+    g.arc(x, 64, 11, 0, Math.PI * 2);
+    g.fill();
+  }
+  const t = new THREE.CanvasTexture(c);
+  t.colorSpace = THREE.SRGBColorSpace;
+  t.anisotropy = 4;
+  return new THREE.MeshPhysicalMaterial({ map: t, roughness: 0.14, metalness: 0, clearcoat: 1, clearcoatRoughness: 0.035, envMapIntensity: 1.1, specularIntensity: 1 });
+}
+
 export class BallsView {
   group = new THREE.Group();
   vis: BallVis[] = [];
   private mats: THREE.MeshPhysicalMaterial[] = [];
+  private guerraMats: Record<'blue' | 'red', THREE.MeshPhysicalMaterial> | null = null;
+  private styled = false;
 
   static async create(assets: Assets): Promise<BallsView> {
     const v = new BallsView();
@@ -75,7 +97,18 @@ export class BallsView {
       // orientação inicial aleatória (determinística por bola) para os números não ficarem todos iguais
       mesh.quaternion.setFromEuler(new THREE.Euler(i * 1.9, i * 2.7, i * 0.9));
     }
+    v.guerraMats = { blue: guerraMaterial('#1c4fd0'), red: guerraMaterial('#d2232a') };
     return v;
+  }
+
+  /** Guerra: bolas lisas azuis (1–7) e vermelhas (8–14), sem números; senão as bolas numeradas. */
+  setStyle(guerra: boolean): void {
+    if (guerra === this.styled || !this.guerraMats) return;
+    this.styled = guerra;
+    for (let i = 1; i < this.vis.length; i++) {
+      const m = guerra ? (i <= 7 ? this.guerraMats.blue : i <= 14 ? this.guerraMats.red : this.mats[i]!) : this.mats[i]!;
+      this.vis[i]!.mesh.material = m;
+    }
   }
 
   /** Destaca (anel dourado no pano) as bolas indicadas. */

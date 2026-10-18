@@ -21,6 +21,11 @@ export function ballIcon(n: number, size = 22): HTMLElement {
   return h('span', { class: `ball${stripe ? ' stripe' : ''}`, style: { '--c': colorOf(n), '--s': `${size}px` } }, h('i', { text: String(n) }));
 }
 
+/** Guerra: bola lisa azul ou vermelha (sem número). */
+export function guerraDot(group: 'blue' | 'red', size = 18): HTMLElement {
+  return h('span', { class: 'gdot', style: { '--c': group === 'blue' ? '#1f55d6' : '#d6262c', '--s': `${size}px` } });
+}
+
 export interface HudHandlers {
   onPower(p: number, release: boolean): void;
   onSpin(a: number, b: number): void;
@@ -452,7 +457,8 @@ export class Hud {
     let sub = '';
     if (v.practice && m) sub = `${m.tray.length} na caçapa`;
     else if (m) {
-      if (v.mode === 'bola61') sub = `${m.score[seat] ?? 0} / ${POINTS_TO_WIN} pts`;
+      if (v.mode === 'guerra') sub = g ? `${groupName(g)} · ${m.balls.filter((b) => b.on && b.id > 0 && groupOf('guerra', b.id) === g).length} na mesa` : '';
+      else if (v.mode === 'bola61') sub = `${m.score[seat] ?? 0} / ${POINTS_TO_WIN} pts`;
       else sub = g ? `${groupName(g)} · ${m.score[seat] ?? 0}/7` : 'Mesa aberta';
     }
     this.seatOf.set(p.id, seat);
@@ -482,6 +488,18 @@ export class Hud {
         const row = h('div', { class: 'left-row' });
         for (const id of left) row.append(ballIcon(id, 18));
         tray.append(row);
+      }
+      return;
+    }
+    if (m.mode === 'guerra') {
+      // a bandeja de cada um mostra as bolas DELE: apagadas as que já saíram da mesa
+      const g = m.groups[seat];
+      if (g !== 'blue' && g !== 'red') return;
+      for (let id = 1; id <= 14; id++) {
+        if (groupOf('guerra', id) !== g) continue;
+        const dot = guerraDot(g, 18);
+        if (!m.balls.some((b) => b.id === id && b.on)) dot.classList.add('potted');
+        tray.append(dot);
       }
       return;
     }

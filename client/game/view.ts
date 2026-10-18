@@ -163,6 +163,11 @@ export class PoolView {
     return this.quality;
   }
 
+  /** Guerra usa bolas lisas azuis e vermelhas. */
+  setBallStyle(guerra: boolean): void {
+    this.balls.setStyle(guerra);
+  }
+
   setTable(id: string): void {
     this.table.setTable(id);
   }

@@ -26,6 +26,30 @@ describe('sala', () => {
     if (!core.d.seriesOver) expect(core.next('u1', now)).toBe(true);
   });
 
+  it('guerra: sala com bot joga até o fim e mostra bolas azuis e vermelhas', () => {
+    const core = new RoomCore(newRoom('ABCDE', { mode: 'guerra', turnSeconds: 30, bestOf: 1 }));
+    core.join('u1', 'Ana');
+    core.setBot('u1', true, 'normal');
+    expect(core.start('u1', 1000)).toBe(true);
+    expect(core.d.match!.groups).toEqual(['blue', 'red']);
+    let now = 1000;
+    let n = 0;
+    while (core.d.phase === 'playing' && n < 400) {
+      const p = core.turnPlayer!;
+      const plan = p.bot ? core.planBot()! : { shot: { ...botPlan(core.d.match!, 'normal').shot } };
+      const r = core.shot(p.id, plan.shot, now);
+      expect('error' in r).toBe(false);
+      now += 8000;
+      n++;
+    }
+    expect(core.d.phase).toBe('ended');
+    expect(core.d.result).toBeTruthy();
+    const m = core.d.match!;
+    const bl = m.balls.filter((b) => b.on && b.id >= 1 && b.id <= 7).length;
+    const rd = m.balls.filter((b) => b.on && b.id >= 8 && b.id <= 14).length;
+    expect(bl === 0 || rd === 0).toBe(true);
+  });
+
   it('só o jogador da vez joga; tempo esgotado dá falta; 3 seguidas = derrota', () => {
     const core = new RoomCore(newRoom('ABCDE', { turnSeconds: 30 }));
     core.join('a', 'A');

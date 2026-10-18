@@ -3,18 +3,21 @@
  *  - par_impar: sinuca brasileira com 8 — um jogador fica com as pares, o outro com as ímpares, a 8 por último.
  *  - lisas_listradas: bola 8 internacional (1–7 lisas, 9–15 listradas).
  *  - bola61: quem fizer 61 pontos primeiro (valor = número da bola). Tem que tocar primeiro na menor da mesa.
+ *  - guerra: jogo de bar. 7 bolas azuis contra 7 vermelhas coladas nas tabelas longas; vence quem limpar o lado do adversário.
+ *    Tem que tocar primeiro numa bola do adversário; derrubar bola sua (fogo amigo) fica contra você; branca na caçapa = bola na mão.
  */
 import type { BallPos } from './physics';
 import { Sim } from './physics';
 import { BALL_D, BALL_R, FOOT_X, HEAD_X, HL, HW } from './table';
 
-export type Mode = 'par_impar' | 'lisas_listradas' | 'bola61';
-export type Group = 'even' | 'odd' | 'solid' | 'stripe';
+export type Mode = 'par_impar' | 'lisas_listradas' | 'bola61' | 'guerra';
+export type Group = 'even' | 'odd' | 'solid' | 'stripe' | 'red' | 'blue';
 export type InHand = 'none' | 'any' | 'head';
 
 export const MODES: { id: Mode; name: string; short: string; desc: string }[] = [
   { id: 'par_impar', name: 'Par ou Ímpar', short: 'Pares x Ímpares', desc: 'Sinuca brasileira: um fica com as bolas pares, o outro com as ímpares. A 8 só no final.' },
   { id: 'lisas_listradas', name: 'Lisas x Listradas', short: 'Bola 8', desc: 'Bola 8 clássica: 1–7 lisas contra 9–15 listradas. A 8 só no final.' },
+  { id: 'guerra', name: 'Guerra', short: 'Azuis x Vermelhas', desc: 'Jogo de bar: 7 bolas azuis contra 7 vermelhas coladas nas tabelas. Derrube as do adversário; as suas, nunca. Toque sempre primeiro numa bola dele.' },
   { id: 'bola61', name: 'Bola 61', short: '61 pontos', desc: 'Cada bola vale o seu número. Toque sempre na menor da mesa. Quem chegar a 61 vence.' },
 ];
 
@@ -51,9 +54,10 @@ export interface ShotOutcome {
   reason?: string;
 }
 
-export const isGroupMode = (m: Mode): boolean => m !== 'bola61';
+export const isGroupMode = (m: Mode): boolean => m !== 'bola61' && m !== 'guerra';
 
 export const groupOf = (mode: Mode, id: number): Group | null => {
+  if (mode === 'guerra') return id >= 1 && id <= 7 ? 'blue' : id >= 8 && id <= 14 ? 'red' : null;
   if (id <= 0 || id === 8) return null;
   if (mode === 'par_impar') return id % 2 === 0 ? 'even' : 'odd';
   if (mode === 'lisas_listradas') return id < 8 ? 'solid' : 'stripe';
@@ -61,9 +65,9 @@ export const groupOf = (mode: Mode, id: number): Group | null => {
 };
 
 export const groupName = (g: Group | null): string =>
-  g === 'even' ? 'Pares' : g === 'odd' ? 'Ímpares' : g === 'solid' ? 'Lisas' : g === 'stripe' ? 'Listradas' : '—';
+  g === 'even' ? 'Pares' : g === 'odd' ? 'Ímpares' : g === 'solid' ? 'Lisas' : g === 'stripe' ? 'Listradas' : g === 'blue' ? 'Azuis' : g === 'red' ? 'Vermelhas' : '—';
 
-const otherGroup = (g: Group): Group => (g === 'even' ? 'odd' : g === 'odd' ? 'even' : g === 'solid' ? 'stripe' : 'solid');
+export const otherGroup = (g: Group): Group => (g === 'even' ? 'odd' : g === 'odd' ? 'even' : g === 'solid' ? 'stripe' : g === 'stripe' ? 'solid' : g === 'blue' ? 'red' : 'blue');
 
 /** Posição inicial: branca na casa e o triângulo com a 8 no centro e uma lisa e uma listrada nas pontas de trás. */
 export function rackPositions(): BallPos[] {
@@ -81,7 +85,25 @@ export function rackPositions(): BallPos[] {
   return out;
 }
 
+/** Guerra: as 7 azuis (1–7) numa tabela longa e as 7 vermelhas (8–14) na outra, espalhadas; a branca na casa. A 15 não é usada. */
+export function guerraPositions(): BallPos[] {
+  const out: BallPos[] = [{ id: 0, x: HEAD_X, y: 0, on: true }];
+  const yy = HW - BALL_R - 0.0004;
+  const span = HL - 0.2;
+  for (let i = 0; i < 7; i++) {
+    const x = -span + (i * 2 * span) / 6;
+    out.push({ id: 1 + i, x, y: -yy, on: true });
+    out.push({ id: 8 + i, x, y: yy, on: true });
+  }
+  out.push({ id: 15, x: 0, y: 0, on: false });
+  out.sort((a, b) => a.id - b.id);
+  return out;
+}
+
 export function newMatch(mode: Mode, firstTurn = 0): MatchState {
+  if (mode === 'guerra') {
+    return { mode, balls: guerraPositions(), turn: firstTurn, groups: ['blue', 'red'], score: [0, 0], tray: [], inHand: 'none', breakShot: false, over: false, winner: -1, shotNo: 0 };
+  }
   return { mode, balls: rackPositions(), turn: firstTurn, groups: [null, null], score: [0, 0], tray: [], inHand: 'none', breakShot: true, over: false, winner: -1, shotNo: 0 };
 }
 
@@ -91,6 +113,7 @@ export const cloneState = (s: MatchState): MatchState => JSON.parse(JSON.stringi
 export function remaining(s: MatchState, player: number): number {
   const g = s.groups[player];
   if (!g) return 99;
+  if (s.mode === 'guerra') return s.balls.filter((b) => b.on && b.id > 0 && groupOf('guerra', b.id) === g).length;
   let n = 0;
   for (const b of s.balls) if (b.on && b.id > 0 && b.id !== 8 && groupOf(s.mode, b.id) === g) n++;
   return n;
@@ -106,6 +129,10 @@ export const lowestOnTable = (balls: BallPos[]): number => {
 export function legalFirstHit(s: MatchState, id: number): boolean {
   if (id <= 0) return false;
   if (s.mode === 'bola61') return id === lowestOnTable(s.balls);
+  if (s.mode === 'guerra') {
+    const mine = s.groups[s.turn];
+    return !!mine && groupOf('guerra', id) === otherGroup(mine);
+  }
   const g = s.groups[s.turn];
   if (!g) return id !== 8;
   if (remaining(s, s.turn) === 0) return id === 8;
@@ -203,7 +230,7 @@ export function resolveShot(prev: MatchState, sim: Sim): { state: MatchState; ou
   if (cueGone) foul = 'A branca caiu na caçapa';
   else if (first < 0) foul = 'A branca não tocou em nenhuma bola';
   else if (!legalFirstHit(prev, first)) {
-    foul = s.mode === 'bola61' ? `Tinha que tocar na bola ${lowestOnTable(prev.balls)}` : first === 8 && prevRemaining !== 0 ? 'Tocou na 8 antes da hora' : 'Tocou primeiro numa bola do adversário';
+    foul = s.mode === 'guerra' ? 'Tocou primeiro numa bola sua' : s.mode === 'bola61' ? `Tinha que tocar na bola ${lowestOnTable(prev.balls)}` : first === 8 && prevRemaining !== 0 ? 'Tocou na 8 antes da hora' : 'Tocou primeiro numa bola do adversário';
   }
 
   const out: ShotOutcome = { foul, message: '', again: false, potted: objPotted.slice(), respotted: [], over: false, winner: -1 };
@@ -216,7 +243,42 @@ export function resolveShot(prev: MatchState, sim: Sim): { state: MatchState; ou
     objPotted.splice(objPotted.indexOf(8), 1);
   }
 
-  if (s.mode === 'bola61') {
+  if (s.mode === 'guerra') {
+    const mineG = s.groups[me]!;
+    const oppG = s.groups[opp]!;
+    const mineP = objPotted.filter((id) => groupOf('guerra', id) === mineG);
+    const oppP = objPotted.filter((id) => groupOf('guerra', id) === oppG);
+    s.tray.push(...objPotted);
+    s.inHand = 'none';
+    const left = (g: Group): number => s.balls.filter((b) => b.on && b.id > 0 && groupOf('guerra', b.id) === g).length;
+    const myLeft = left(mineG);
+    const oppLeft = left(oppG);
+    s.score[me] = 7 - oppLeft;
+    s.score[opp] = 7 - myLeft;
+    if (foul) {
+      s.turn = opp;
+      s.inHand = 'any';
+      out.message = mineP.length ? `${foul}. Fogo amigo` : foul;
+    } else if (oppP.length > 0 && mineP.length === 0) {
+      out.again = true;
+      out.message = oppP.length > 1 ? `${oppP.length} bolas do adversário!` : 'Bola do adversário!';
+    } else {
+      s.turn = opp;
+      if (mineP.length) out.message = 'Fogo amigo: bola sua na caçapa';
+    }
+    // quem ficar sem bolas perde (inclusive por fogo amigo)
+    if (myLeft === 0) {
+      s.over = true;
+      s.winner = opp;
+      out.reason = 'ficou sem bolas';
+      out.message = '';
+    } else if (oppLeft === 0) {
+      s.over = true;
+      s.winner = me;
+      out.reason = 'limpou o lado do adversário';
+      out.message = '';
+    }
+  } else if (s.mode === 'bola61') {
     if (foul) {
       // bolas derrubadas numa falta voltam para a mesa
       for (const id of objPotted) {

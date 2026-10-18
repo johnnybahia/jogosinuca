@@ -43,7 +43,7 @@ function play(mode: Mode, lv: [BotLevel, BotLevel], seed: number, maxShots = 140
 
 describe('bot', () => {
   it('partida inteira termina e tem jogadas válidas', () => {
-    for (const mode of ['par_impar', 'bola61'] as Mode[]) {
+    for (const mode of ['par_impar', 'bola61', 'guerra'] as Mode[]) {
       const r = play(mode, ['normal', 'normal'], 7);
       console.log(mode, 'tacadas', r.shots, 'cpu', r.ms.toFixed(0), 'ms', 'caçapadas', r.pots.join('/'), 'fim', r.s.over, 'vencedor', r.s.winner, 'placar', r.s.score.join('-'));
       expect(r.shots).toBeGreaterThan(5);
