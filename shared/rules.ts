@@ -86,15 +86,27 @@ export function rackPositions(): BallPos[] {
   return out;
 }
 
-/** Guerra: as 7 azuis (1–7) numa tabela longa e as 7 vermelhas (8–14) na outra, espalhadas; a branca na casa. A 15 não é usada. */
+/**
+ * Guerra: posição inicial de cada bola. Olhando a mesa de pé (comprimento para cima), as azuis ficam na tabela da ESQUERDA
+ * e as vermelhas na da DIREITA: 5 bolas coladas na tabela longa do seu lado e 2 no fundo (tabela curta do outro extremo),
+ * uma cor de cada lado. Ids 1–7 azuis, 8–14 vermelhas; a 15 não é usada.
+ */
+const GUERRA_LONG_X = [-0.95, -0.6, -0.25, 0.45, 0.85];
+const GUERRA_FOOT_Y = [0.17, 0.39];
+
+export function guerraSlot(group: 'blue' | 'red', i: number): { x: number; y: number } {
+  const side = group === 'blue' ? 1 : -1;
+  if (i < GUERRA_LONG_X.length) return { x: GUERRA_LONG_X[i]!, y: side * (HW - BALL_R - 0.0004) };
+  return { x: HL - BALL_R - 0.0004, y: side * GUERRA_FOOT_Y[i - GUERRA_LONG_X.length]! };
+}
+
 export function guerraPositions(): BallPos[] {
   const out: BallPos[] = [{ id: 0, x: HEAD_X, y: 0, on: true }];
-  const yy = HW - BALL_R - 0.0004;
-  const span = HL - 0.2;
   for (let i = 0; i < 7; i++) {
-    const x = -span + (i * 2 * span) / 6;
-    out.push({ id: 1 + i, x, y: -yy, on: true });
-    out.push({ id: 8 + i, x, y: yy, on: true });
+    const bl = guerraSlot('blue', i);
+    const rd = guerraSlot('red', i);
+    out.push({ id: 1 + i, x: bl.x, y: bl.y, on: true });
+    out.push({ id: 8 + i, x: rd.x, y: rd.y, on: true });
   }
   out.push({ id: 15, x: 0, y: 0, on: false });
   out.sort((a, b) => a.id - b.id);
@@ -232,14 +244,17 @@ export function applyPenalty(s: MatchState, choice: 'hand' | 'revive'): { revive
   }
   const id = list[0]!;
   const ball = s.balls.find((b) => b.id === id)!;
-  const yy = (s.turn === 0 ? -1 : 1) * (HW - BALL_R - 0.0004);
-  const span = HL - 0.2;
-  const slot = (id - (groupOf('guerra', id) === 'blue' ? 1 : 8)) * (2 * span) / 6 - span;
-  const xs = [slot, ...Array.from({ length: 41 }, (_, i) => -HL + BALL_R + (i * (2 * HL - 2 * BALL_R)) / 40).sort((a, b) => Math.abs(a - slot) - Math.abs(b - slot))];
-  for (const x of xs) {
-    if (free(s.balls, x, yy, id)) {
-      ball.x = x;
-      ball.y = yy;
+  const grp = groupOf('guerra', id) as 'blue' | 'red';
+  const idx = id - (grp === 'blue' ? 1 : 8);
+  const side = grp === 'blue' ? 1 : -1;
+  const yy = side * (HW - BALL_R - 0.0004);
+  const cands: { x: number; y: number }[] = [guerraSlot(grp, idx)];
+  for (let i = 0; i < 7; i++) cands.push(guerraSlot(grp, i));
+  for (let i = 0; i <= 40; i++) cands.push({ x: -HL + 0.25 + (i * (2 * HL - 0.5)) / 40, y: yy });
+  for (const c of cands) {
+    if (free(s.balls, c.x, c.y, id)) {
+      ball.x = c.x;
+      ball.y = c.y;
       ball.on = true;
       break;
     }
