@@ -214,6 +214,9 @@ input { font: inherit; }
 
 /* ajuste fino */
 .finewrap { position: absolute; left: 50%; bottom: calc(var(--sab) + 10px); transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; gap: 2px; pointer-events: none; }
+.fine-top { display: flex; align-items: center; gap: 8px; }
+.stepsel { appearance: none; height: 24px; padding: 0 10px; border-radius: 12px; border: 1px solid var(--line); background: rgba(10, 13, 18, 0.82); color: var(--gold2); font: 700 0.7rem system-ui; touch-action: manipulation; pointer-events: none; opacity: 0.5; }
+.hud.can-play .stepsel { pointer-events: auto; opacity: 1; }
 .fine-row { display: flex; align-items: center; gap: 8px; }
 .fine-deg { font: 700 0.72rem system-ui; letter-spacing: 0.08em; color: #e9e2d0; text-shadow: 0 1px 6px #000; min-height: 1em; }
 .fstep { appearance: none; min-width: 58px; height: 40px; border-radius: 12px; border: 1px solid var(--line); background: rgba(10, 13, 18, 0.82); color: var(--ink); font: 700 0.85rem system-ui; touch-action: manipulation; pointer-events: none; opacity: 0.5; }

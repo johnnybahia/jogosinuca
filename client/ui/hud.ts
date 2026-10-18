@@ -176,8 +176,51 @@ export class Hud {
     this.fine.append(h('div', { class: 'fine-track' }), this.fineKnob, h('span', { class: 'fine-l', text: '◂' }), h('span', { class: 'fine-r', text: '▸' }));
     this.bindFine();
     // passos de 1 grau: um toque, um grau (sem arrastar, sem passar do ponto)
-    const step = (label: string, title: string, deg: number): HTMLButtonElement => h('button', { class: 'fstep', text: label, attrs: { type: 'button', title, 'aria-label': title }, on: { click: () => hd.onStep(deg) } });
-    const fineWrap = h('div', { class: 'finewrap' }, this.fineDeg, h('div', { class: 'fine-row' }, step('◂ 1°', 'Mira 1 grau para a esquerda', -1), this.fine, step('1° ▸', 'Mira 1 grau para a direita', 1)));
+    const STEPS = [2, 1, 0.5, 0.2, 0.1];
+    let stepDeg = 1;
+    try {
+      const sv = Number(localStorage.getItem('sinuca_step'));
+      if (STEPS.includes(sv)) stepDeg = sv;
+    } catch {
+      /* ok */
+    }
+    const lab = (): string => `${stepDeg}°`;
+    const stepSel = h('button', { class: 'stepsel', attrs: { type: 'button', title: 'Tamanho do passo', 'aria-label': 'Tamanho do passo' }, text: `Passo ${lab()}`, on: { click: () => {
+      stepDeg = STEPS[(STEPS.indexOf(stepDeg) + 1) % STEPS.length]!;
+      try {
+        localStorage.setItem('sinuca_step', String(stepDeg));
+      } catch {
+        /* ok */
+      }
+      stepSel.textContent = `Passo ${lab()}`;
+      bl.textContent = `◂ ${lab()}`;
+      br.textContent = `${lab()} ▸`;
+    } } });
+    // um toque, um passo; segurando, repete
+    const step = (dir: number): HTMLButtonElement => {
+      const b = h('button', { class: 'fstep', attrs: { type: 'button', 'aria-label': dir < 0 ? 'Mirar para a esquerda' : 'Mirar para a direita' } });
+      let t = 0;
+      let iv = 0;
+      const stop = (): void => {
+        window.clearTimeout(t);
+        window.clearInterval(iv);
+      };
+      b.addEventListener('pointerdown', (e) => {
+        e.preventDefault();
+        hd.onStep(dir * stepDeg);
+        stop();
+        t = window.setTimeout(() => {
+          iv = window.setInterval(() => hd.onStep(dir * stepDeg), 110);
+        }, 420);
+      });
+      for (const ev of ['pointerup', 'pointercancel', 'pointerleave']) b.addEventListener(ev, stop);
+      return b;
+    };
+    const bl = step(-1);
+    const br = step(1);
+    bl.textContent = `◂ ${lab()}`;
+    br.textContent = `${lab()} ▸`;
+    const fineWrap = h('div', { class: 'finewrap' }, h('div', { class: 'fine-top' }, this.fineDeg, stepSel), h('div', { class: 'fine-row' }, bl, this.fine, br));
 
     this.placeBar.append(h('span', { text: 'Arraste a bola branca para posicionar' }), h('button', { class: 'btn primary small', text: 'Confirmar', attrs: { type: 'button' }, on: { click: () => hd.onConfirmPlace() } }));
     this.placeBar.hidden = true;
@@ -336,7 +379,7 @@ export class Hud {
 
   /** Direção da mira em graus (referência para os passos de 1°). */
   setAimDeg(deg: number | null): void {
-    this.fineDeg.textContent = deg === null ? '' : `Mira ${(((deg % 360) + 360) % 360).toFixed(1)}°`;
+    this.fineDeg.textContent = deg === null ? '' : `Mira ${(((deg % 360) + 360) % 360).toFixed(2)}°`;
   }
 
   /** Atualiza o controle de altura (0..1) sem disparar o evento. */
