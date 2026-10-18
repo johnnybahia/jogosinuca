@@ -27,6 +27,7 @@ export interface HudHandlers {
   onView(): void;
   onZoom(): void;
   onTable(): void;
+  onContact(): void;
   onGuide(): void;
   onSound(): void;
   onMenu(): void;
@@ -70,6 +71,7 @@ export class Hud {
   private btnView!: HTMLButtonElement;
   private btnZoom!: HTMLButtonElement;
   private btnTable!: HTMLButtonElement;
+  private btnContact!: HTMLButtonElement;
   private aimInfo = h('div', { class: 'aim-info' });
   private turnChip = h('div', { class: 'turn-chip' });
   private btnCam!: HTMLButtonElement;
@@ -111,9 +113,10 @@ export class Hud {
     EMOTES.forEach((e, i) => this.emotes.append(h('button', { class: 'emote-btn', text: e, attrs: { type: 'button' }, on: { click: () => { this.emotes.classList.remove('open'); hd.onEmote?.(i); } } })));
     // menu lateral recolhível: só ficam visíveis o botão de abrir e o da câmera base
     this.btnToggle = mk('⋯', 'Mostrar/esconder botões', () => this.setToolsOpen(this.tools.classList.contains('closed')));
+    this.btnContact = mk('🎯', 'Câmera de contato: de perto onde a branca vai bater', () => hd.onContact());
     const btnBase = mk('🎥', 'Câmera base: volta ao enquadramento original', () => hd.onBaseCam());
     for (const b of [this.btnView, this.btnTable, this.btnZoom, this.btnGuide, this.btnSound, this.btnHint, this.btnCam, this.btnMic, this.btnEmote, btnMenu]) b.classList.add('tx');
-    const tools = h('div', { class: 'tools closed' }, this.btnToggle, btnBase, this.btnView, this.btnTable, this.btnZoom, this.btnGuide, this.btnSound, this.btnHint, this.btnCam, this.btnMic, this.btnEmote, btnMenu);
+    const tools = h('div', { class: 'tools closed' }, this.btnToggle, btnBase, this.btnContact, this.btnView, this.btnTable, this.btnZoom, this.btnGuide, this.btnSound, this.btnHint, this.btnCam, this.btnMic, this.btnEmote, btnMenu);
     this.tools = tools;
     this.setToolsOpen(loadPrefs().toolsOpen);
 
@@ -288,6 +291,10 @@ export class Hud {
   /** Direção da mira em graus (referência para os passos de 1°). */
   setAimDeg(deg: number | null): void {
     this.fineDeg.textContent = deg === null ? '' : `Mira ${(((deg % 360) + 360) % 360).toFixed(1)}°`;
+  }
+
+  setContactOn(on: boolean): void {
+    this.btnContact.classList.toggle('on', on);
   }
 
   setTableOn(on: boolean): void {

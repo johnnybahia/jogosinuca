@@ -244,6 +244,13 @@ export class PoolView {
     this.cam.overview = on;
   }
 
+  /** Câmera de contato: de perto no ponto onde a branca vai tocar a bola alvo. */
+  setContactView(on: boolean): void {
+    this.cam.contactMode = on;
+    if (!on) this.cam.contactFocus = null;
+    else this.refreshAim();
+  }
+
   private cueEl = CUE_ELEVATION;
   private slide: { fx: number; fy: number; tx: number; ty: number; t: number } | null = null;
 
@@ -287,6 +294,13 @@ export class PoolView {
       this.cue.setVisible(true);
     }
     this.cue.setFade(this.cueOn);
+    if (this.cam.contactMode) {
+      const dx = Math.cos(angle);
+      const dy = Math.sin(angle);
+      const t = aimTrace(this.pos, cue.x, cue.y, dx, dy);
+      const o = t.hit >= 0 ? this.pos.find((p) => p.id === t.hit) : null;
+      this.cam.contactFocus = o ? { x: (t.ghostX + o.x) / 2, y: (t.ghostY + o.y) / 2 } : { x: t.wallX, y: t.wallY };
+    }
     if (this.aimOn) {
       const dx = Math.cos(angle);
       const dy = Math.sin(angle);

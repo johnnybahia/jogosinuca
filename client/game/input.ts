@@ -137,7 +137,8 @@ export class AimInput {
 
   zoom(f: number): void {
     const c = this.view.cam;
-    if (c.mode === 'top' || c.overview) c.topZoom = clamp(c.topZoom * f, 0.25, 1.4);
+    if (c.contactMode && c.mode === 'aim' && !c.overview) c.contactDist = clamp(c.contactDist * f, 0.22, 1.4);
+    else if (c.mode === 'top' || c.overview) c.topZoom = clamp(c.topZoom * f, 0.25, 1.4);
     else {
       c.userDist = clamp(c.userDist * f, 0.22, 3);
       c.manualZoom = true;

@@ -125,6 +125,7 @@ export class GameScreen {
       onView: () => this.toggleView(),
       onZoom: () => this.toggleZoom(),
       onTable: () => this.toggleTable(),
+      onContact: () => this.toggleContact(),
       onGuide: () => this.toggleGuide(),
       onSound: () => this.toggleSound(),
       onMenu: () => this.openMenu(),
@@ -585,6 +586,11 @@ export class GameScreen {
     if (this.phase !== 'aim' && this.phase !== 'wait') return;
     this.top = !this.top;
     this.topLock = this.top;
+    if (this.top && this.contact) {
+      this.contact = false;
+      this.view.setContactView(false);
+      this.hud.setContactOn(false);
+    }
     this.view.setCameraMode(this.top ? 'top' : 'aim');
     this.hud.setButtons({ top: this.top, guide: loadPrefs().guide, muted: isMuted() });
     sndClick();
@@ -616,6 +622,9 @@ export class GameScreen {
     c.topZoom = 1;
     c.overview = false;
     c.manualZoom = false;
+    this.contact = false;
+    this.view.setContactView(false);
+    this.hud.setContactOn(false);
     this.overview = false;
     this.topLock = false;
     if (this.phase !== 'place') {
@@ -628,9 +637,36 @@ export class GameScreen {
     sndClick();
   }
 
+  private contact = false;
+  /** Câmera de contato (🎯): de perto no ponto em que a branca toca a bola que você está mirando. */
+  private toggleContact(): void {
+    this.contact = !this.contact;
+    if (this.contact) {
+      // sai da vista de cima fixa e da vista da mesa
+      this.overview = false;
+      this.view.setOverview(false);
+      this.hud.setTableOn(false);
+      if (this.topLock) {
+        this.topLock = false;
+        this.top = false;
+        if (this.phase !== 'place') this.view.setCameraMode('aim');
+      }
+      this.view.cam.contactDist = 0.5;
+    }
+    this.view.setContactView(this.contact);
+    this.hud.setContactOn(this.contact);
+    this.hud.setButtons({ top: this.top, guide: loadPrefs().guide, muted: isMuted() });
+    sndClick();
+  }
+
   private overview = false;
   private toggleTable(): void {
     this.overview = !this.overview;
+    if (this.overview && this.contact) {
+      this.contact = false;
+      this.view.setContactView(false);
+      this.hud.setContactOn(false);
+    }
     this.view.setOverview(this.overview);
     this.hud.setTableOn(this.overview);
     sndClick();
@@ -638,6 +674,13 @@ export class GameScreen {
 
   private toggleZoom(): void {
     const c = this.view.cam;
+    if (c.contactMode && c.mode === 'aim' && !c.overview) {
+      const near = c.contactDist > 0.35;
+      c.contactDist = near ? 0.26 : 0.5;
+      this.hud.setZoomOn(near);
+      sndClick();
+      return;
+    }
     if (c.mode === 'top' || c.overview) {
       const near = c.topZoom > 0.6;
       c.topZoom = near ? 0.35 : 1;

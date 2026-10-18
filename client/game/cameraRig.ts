@@ -28,6 +28,10 @@ export class CameraRig {
   topZoom = 1;
   /** vista da mesa: câmera alta e fixa, mesa toda na tela, a mira continua funcionando */
   overview = false;
+  /** vista de contato: câmera de perto no ponto onde a branca toca a bola alvo (ou na primeira tabela) */
+  contactMode = false;
+  contactFocus: { x: number; y: number } | null = null;
+  contactDist = 0.5;
   /** o jogador mexeu no zoom nesta jogada: o enquadramento automático não mexe na distância */
   manualZoom = false;
   /** pontos (plano da física) que precisam caber na tela: branca, bola alvo, caçapa */
@@ -114,7 +118,12 @@ export class CameraRig {
       // aspecto vertical (celular): abre o campo de visão para a mesa caber na largura
       fovT = 42 + narrow * 40;
       gDist *= 1 + narrow * 0.25;
-      if (this.overview) {
+      if (this.contactMode && this.contactFocus && !this.overview) {
+        gx = this.contactFocus.x;
+        gy = this.contactFocus.y;
+        gPitch = Math.max(this.userPitch, 0.62);
+        gDist = this.contactDist * (1 + narrow * 0.25);
+      } else if (this.overview) {
         gx = 0;
         gy = 0;
         gYaw = Math.PI / 2;

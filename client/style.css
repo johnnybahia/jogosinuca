@@ -160,7 +160,7 @@ input { font: inherit; }
 
 .tools { position: absolute; left: calc(var(--sal) + 14px); bottom: calc(var(--sab) + 184px); display: grid; grid-template-columns: repeat(2, auto); gap: 8px; pointer-events: auto; }
 .tools.closed .tx { display: none; }
-.tools:not(.closed) { grid-template-columns: repeat(3, auto); }
+.tools { grid-template-columns: repeat(3, auto); }
 .ibtn { appearance: none; width: 42px; height: 42px; border-radius: 12px; border: 1px solid var(--line); background: rgba(10, 13, 18, 0.78); color: var(--ink); font-size: 1.15rem; cursor: pointer; touch-action: manipulation; pointer-events: auto; }
 .ibtn.on { border-color: var(--gold); color: var(--gold); }
 .ibtn.off { color: var(--danger); }
