@@ -158,11 +158,9 @@ export class Hud {
       this.lowBox.addEventListener('pointercancel', end);
     }
     const btnBase = mk('🎥', 'Câmera base: volta ao enquadramento original', () => hd.onBaseCam());
-    // câmeras sempre visíveis ACIMA do menu; o menu (⋯) abre um painel ao lado, sem empurrar nada
-    const panel = h('div', { class: 'tools-panel' }, this.btnView, this.btnTable, this.btnZoom, this.btnGuide, this.btnSound, this.btnHint, this.btnCam, this.btnMic, this.btnEmote, btnMenu);
-    const tools = h('div', { class: 'tools closed' }, h('div', { class: 'tools-top' }, this.lowBox, this.btnLow), h('div', { class: 'tools-cam' }, this.btnContact, btnBase), h('div', { class: 'tools-menu' }, this.btnToggle, panel));
+    // só o essencial: altura, olho, contato, câmera base e o menu principal
+    const tools = h('div', { class: 'tools' }, h('div', { class: 'tools-top' }, this.lowBox, this.btnLow), h('div', { class: 'tools-cam' }, this.btnContact, btnBase), h('div', { class: 'tools-menu' }, btnMenu));
     this.tools = tools;
-    this.setToolsOpen(loadPrefs().toolsOpen);
 
     // força: puxe a alça para baixo e solte para tacar
     this.power.append(h('div', { class: 'power-track' }, this.powerFill), this.powerHint, this.powerKnob, this.powerLabel);
