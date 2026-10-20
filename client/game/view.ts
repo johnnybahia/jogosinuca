@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { aimTrace, cutAngle, pocketAim, previewCuePath } from '../../shared/aim';
+import { aimTrace, bankTrace, cutAngle, pocketAim, previewCuePath } from '../../shared/aim';
 import { BALL_R, HL, HW, POCKETS } from '../../shared/table';
 import { Sim, powerToSpeed, strike, type BallPos, type ShotParams, type SimEvent } from '../../shared/physics';
 import { Assets } from './assets';
@@ -317,7 +317,8 @@ export class PoolView {
       if (this.guideFull) {
         const p = Math.min(1, Math.max(0.35, (pull - 0.04) / 0.24));
         this.aimView.setPath(previewCuePath(this.pos, dx, dy, powerToSpeed(p), a, b, 0.8));
-      } else this.aimView.setPath(null);
+      } else if (info.hit < 0) this.aimView.setPath(bankTrace(this.pos, info.wallX, info.wallY, info.rdx, info.rdy));
+      else this.aimView.setPath(null);
       // enquadramento: branca + ponto do contato + bola alvo + caçapa provável
       const pts = [{ x: cue.x, y: cue.y }];
       if (obj) {

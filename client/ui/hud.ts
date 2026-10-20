@@ -174,7 +174,7 @@ export class Hud {
     this.fine.append(h('div', { class: 'fine-track' }), this.fineKnob, h('span', { class: 'fine-l', text: '◂' }), h('span', { class: 'fine-r', text: '▸' }));
     this.bindFine();
     // passos de 1 grau: um toque, um grau (sem arrastar, sem passar do ponto)
-    const STEPS = [2, 1, 0.5, 0.2, 0.1];
+    const STEPS = [2, 1, 0.5, 0.2, 0.1, 0.05];
     let stepDeg = 1;
     try {
       const sv = Number(localStorage.getItem('sinuca_step'));
@@ -309,7 +309,7 @@ export class Hud {
     let raf = 0;
     const loop = (): void => {
       if (!drag) return;
-      if (Math.abs(v) > 0.04) this.hd.onFine(v);
+      if (Math.abs(v) > 0.02) this.hd.onFine(v * Math.abs(v));
       raf = requestAnimationFrame(loop);
     };
     const val = (e: PointerEvent): number => {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { cutAngle, aimTrace, pocketAim, previewCuePath } from './aim';
+import { cutAngle, aimTrace, pocketAim, previewCuePath, bankTrace } from './aim';
 import { HL, HW } from './table';
 import type { BallPos } from './physics';
 
@@ -54,5 +54,19 @@ describe('mira', () => {
     expect(puxar[puxar.length - 1]!.x).toBeLessThan(puxar[0]!.x - 0.05);
     console.log('preview ms (2 chamadas)', ms.toFixed(1));
     expect(ms).toBeLessThan(100);
+  });
+});
+
+describe('bankTrace', () => {
+  it('reflete na tabela e para na primeira bola', () => {
+    const balls: BallPos[] = [{ id: 0, x: 0, y: 0, on: true }];
+    const d = Math.SQRT1_2;
+    const info = aimTrace(balls, 0, 0, d, d);
+    const pts = bankTrace(balls, info.wallX, info.wallY, info.rdx, info.rdy, 2);
+    expect(pts.length).toBeGreaterThan(2);
+    expect(pts[1]!.y).toBeLessThan(pts[0]!.y);
+    balls.push({ id: 5, x: pts[0]!.x + 0.1, y: pts[0]!.y - 0.1 - 0.03, on: true });
+    const stop = bankTrace(balls, info.wallX, info.wallY, info.rdx, info.rdy, 2);
+    expect(stop.length).toBe(2);
   });
 });

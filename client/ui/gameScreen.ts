@@ -134,7 +134,7 @@ export class GameScreen {
       onMenu: () => this.openMenu(),
       onStep: (deg) => this.stepAim(deg),
       onBaseCam: () => this.baseCamera(),
-      onFine: (d) => this.rotate(d * 0.0016 * (this.view.cam.userDist / 1.05)),
+      onFine: (d) => this.rotate(d * 0.0022 * (this.view.cam.userDist / 1.05)),
       onConfirmPlace: () => this.confirmPlace(),
       onHint: () => this.hint(),
       onCam: () => void this.toggleMedia('cam'),

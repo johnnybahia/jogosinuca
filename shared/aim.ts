@@ -171,3 +171,49 @@ export function previewCuePath(pos: BallPos[], dx: number, dy: number, v: number
   }
   return pts;
 }
+
+/**
+ * Caminho geométrico da branca (sem giro) depois da primeira tabela: parte do ponto de batida `(wx,wy)` com a direção já
+ * refletida e segue por até `bounces` rebatidas, parando na primeira bola. Serve para planejar tabelas.
+ */
+export function bankTrace(balls: BallPos[], wx: number, wy: number, rdx: number, rdy: number, bounces = 2, maxLen = 2.2): { x: number; y: number }[] {
+  const mx = HL - BALL_R;
+  const my = HW - BALL_R;
+  const pts: { x: number; y: number }[] = [{ x: wx, y: wy }];
+  let x = wx;
+  let y = wy;
+  let dx = rdx;
+  let dy = rdy;
+  let len = 0;
+  for (let k = 0; k <= bounces; k++) {
+    let tx = Infinity;
+    let ty = Infinity;
+    if (dx > 1e-9) tx = (mx - x) / dx;
+    else if (dx < -1e-9) tx = (-mx - x) / dx;
+    if (dy > 1e-9) ty = (my - y) / dy;
+    else if (dy < -1e-9) ty = (-my - y) / dy;
+    const tw = Math.min(tx, ty);
+    let tb = Infinity;
+    for (const b of balls) {
+      if (!b.on || b.id === 0) continue;
+      const ox = b.x - x;
+      const oy = b.y - y;
+      const t0 = ox * dx + oy * dy;
+      if (t0 <= 0) continue;
+      const perp2 = ox * ox + oy * oy - t0 * t0;
+      if (perp2 >= BALL_D * BALL_D) continue;
+      tb = Math.min(tb, t0 - Math.sqrt(BALL_D * BALL_D - perp2));
+    }
+    const room = maxLen - len;
+    const t = Math.min(tw, tb, room);
+    if (!Number.isFinite(t) || t <= 1e-6) break;
+    x += dx * t;
+    y += dy * t;
+    len += t;
+    pts.push({ x, y });
+    if (t >= room || tb <= tw) break;
+    if (tx <= ty) dx = -dx;
+    if (ty <= tx) dy = -dy;
+  }
+  return pts;
+}
