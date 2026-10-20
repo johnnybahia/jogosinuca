@@ -313,18 +313,27 @@ export class PoolView {
       const obj = info.hit >= 0 ? this.pos.find((p) => p.id === info.hit)! : null;
       const pk = obj ? pocketAim(obj.x, obj.y, info.objDx, info.objDy) : null;
       this.aimView.update(cue, dx, dy, info, obj, pk, this.guideFull);
+      let bank: { x: number; y: number }[] = [];
       // trajetória real da branca (seguir/puxar/efeito) a partir do contato, com a potência que o taco indica
       if (this.guideFull) {
         const p = Math.min(1, Math.max(0.35, (pull - 0.04) / 0.24));
-        this.aimView.setPath(previewCuePath(this.pos, dx, dy, powerToSpeed(p), a, b, 0.8));
-      } else if (info.hit < 0) this.aimView.setPath(bankTrace(this.pos, info.wallX, info.wallY, info.rdx, info.rdy));
-      else this.aimView.setPath(null);
+        const pp = previewCuePath(this.pos, dx, dy, powerToSpeed(p), a, b, 0.8);
+        this.aimView.setPath(pp);
+        if (info.hit < 0) bank = pp;
+      } else if (info.hit < 0) {
+        bank = bankTrace(this.pos, info.wallX, info.wallY, info.rdx, info.rdy);
+        this.aimView.setPath(bank);
+      } else this.aimView.setPath(null);
       // enquadramento: branca + ponto do contato + bola alvo + caçapa provável
       const pts = [{ x: cue.x, y: cue.y }];
       if (obj) {
         pts.push({ x: info.ghostX, y: info.ghostY }, { x: obj.x, y: obj.y });
         if (pk && pk.index >= 0) pts.push({ x: pk.x, y: pk.y });
-      } else pts.push({ x: info.ghostX, y: info.ghostY });
+      } else {
+        pts.push({ x: info.ghostX, y: info.ghostY });
+        // tabela: enquadra todo o caminho refletido para enxergar onde a branca vai parar/entrar
+        for (const q of bank) pts.push(q);
+      }
       this.cam.frame = pts;
       this.onAimInfo?.(this.guideFull && obj ? `Corte ${Math.round(cutAngle(info, dx, dy))}°${pk && pk.index >= 0 ? (pk.quality === 'ok' ? ' · caçapa ✓' : pk.quality === 'tight' ? ' · caçapa apertada' : ' · caçapa fora') : ''}` : '');
     } else {
