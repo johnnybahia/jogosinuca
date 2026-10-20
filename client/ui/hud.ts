@@ -175,9 +175,9 @@ export class Hud {
     this.bindFine();
     // passos de 1 grau: um toque, um grau (sem arrastar, sem passar do ponto)
     const STEPS = [2, 1, 0.5, 0.2, 0.1, 0.05];
-    let stepDeg = 1;
+    let stepDeg = 0.1;
     try {
-      const sv = Number(localStorage.getItem('sinuca_step'));
+      const sv = Number(localStorage.getItem('sinuca_step2'));
       if (STEPS.includes(sv)) stepDeg = sv;
     } catch {
       /* ok */
@@ -186,7 +186,7 @@ export class Hud {
     const stepSel = h('button', { class: 'stepsel', attrs: { type: 'button', title: 'Tamanho do passo', 'aria-label': 'Tamanho do passo' }, text: `Passo ${lab()}`, on: { click: () => {
       stepDeg = STEPS[(STEPS.indexOf(stepDeg) + 1) % STEPS.length]!;
       try {
-        localStorage.setItem('sinuca_step', String(stepDeg));
+        localStorage.setItem('sinuca_step2', String(stepDeg));
       } catch {
         /* ok */
       }
