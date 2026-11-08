@@ -78,7 +78,7 @@ export const cleanName = (n: unknown): string => String(n ?? '').replace(/[\u000
 export function newRoom(code: string, opts: { mode?: Mode; turnSeconds?: number; isPublic?: boolean; bestOf?: number } = {}): RoomData {
   const turnSeconds = (TURN_SECONDS_OPTIONS as readonly number[]).includes(opts.turnSeconds ?? 60) ? ((opts.turnSeconds ?? 60) as TurnSeconds) : 60;
   const bestOf = (BEST_OF_OPTIONS as readonly number[]).includes(opts.bestOf ?? 1) ? ((opts.bestOf ?? 1) as BestOf) : 1;
-  const mode = MODES.some((m) => m.id === opts.mode) ? (opts.mode as Mode) : 'par_impar';
+  const mode = MODES.some((m) => m.id === opts.mode) ? (opts.mode as Mode) : 'lisas_listradas';
   return { code, hostId: '', mode, turnSeconds, bestOf, isPublic: !!opts.isPublic, phase: 'lobby', players: [], match: null, shotSeq: 0, turnEndsAt: null, gamesDone: 0, timeouts: [0, 0], breaker: 0, seriesOver: false };
 }
 

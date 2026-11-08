@@ -35,7 +35,7 @@ view.onSlow = (q) => {
   view.setLevel(q);
   toast(q === 'low' ? 'Gráficos reduzidos para manter a fluidez.' : 'Gráficos ajustados para o seu aparelho.');
 };
-const m0 = newMatch('par_impar');
+const m0 = newMatch('lisas_listradas');
 view.setBalls(m0.balls);
 view.setAim(null);
 view.setCameraMode('menu');

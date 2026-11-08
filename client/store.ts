@@ -68,13 +68,13 @@ export function loadOfflineSettings(): OfflineSettings {
   try {
     const s = JSON.parse(localStorage.getItem(OFFLINE_KEY) ?? '{}') as Partial<OfflineSettings>;
     return {
-      mode: MODES.some((m) => m.id === s.mode) ? (s.mode as Mode) : 'par_impar',
+      mode: MODES.some((m) => m.id === s.mode) ? (s.mode as Mode) : 'lisas_listradas',
       level: BOT_LEVELS.includes(s.level as BotLevel) ? (s.level as BotLevel) : 'normal',
       turnSeconds: (TURN_SECONDS_OPTIONS as readonly number[]).includes(s.turnSeconds as number) ? (s.turnSeconds as TurnSeconds) : 0,
       color: s.color === 'red' ? 'red' : 'blue',
     };
   } catch {
-    return { mode: 'par_impar', level: 'normal', turnSeconds: 0, color: 'blue' };
+    return { mode: 'lisas_listradas', level: 'normal', turnSeconds: 0, color: 'blue' };
   }
 }
 export function saveOfflineSettings(s: OfflineSettings): void {

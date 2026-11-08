@@ -1,6 +1,5 @@
 /**
  * Regras da sinuca (jogo de bolas numeradas, 2 jogadores).
- *  - par_impar: sinuca brasileira com 8 — um jogador fica com as pares, o outro com as ímpares, a 8 por último.
  *  - lisas_listradas: bola 8 internacional (1–7 lisas, 9–15 listradas).
  *  - bola61: quem fizer 61 pontos primeiro (valor = número da bola). Tem que tocar primeiro na menor da mesa.
  *  - guerra: jogo de bar. 7 bolas azuis contra 7 vermelhas coladas nas tabelas longas; vence quem limpar o lado do adversário.
@@ -10,13 +9,12 @@ import type { BallPos } from './physics';
 import { Sim } from './physics';
 import { BALL_D, BALL_R, FOOT_X, HEAD_X, HL, HW } from './table';
 
-export type Mode = 'par_impar' | 'lisas_listradas' | 'bola61' | 'guerra';
-export type Group = 'even' | 'odd' | 'solid' | 'stripe' | 'red' | 'blue';
+export type Mode = 'lisas_listradas' | 'bola61' | 'guerra';
+export type Group = 'solid' | 'stripe' | 'red' | 'blue';
 /** 'choice' (Guerra): quem recebeu a falta ainda vai escolher entre bola na mão e ressuscitar uma bola sua. */
 export type InHand = 'none' | 'any' | 'head' | 'choice';
 
 export const MODES: { id: Mode; name: string; short: string; desc: string }[] = [
-  { id: 'par_impar', name: 'Par ou Ímpar', short: 'Pares x Ímpares', desc: 'Sinuca brasileira: um fica com as bolas pares, o outro com as ímpares. 7 bolas cada (a 15 conta como par). A 8 só no final.' },
   { id: 'lisas_listradas', name: 'Lisas x Listradas', short: 'Bola 8', desc: 'Bola 8 clássica: 1–7 lisas contra 9–15 listradas. A 8 só no final.' },
   { id: 'guerra', name: 'Sinuca de boteco valendo a 🍺', short: 'Azuis x Vermelhas', desc: 'Brincadeira de boteco: 7 bolas azuis contra 7 vermelhas coladas nas tabelas. Derrube as do adversário; as suas, nunca. Toque sempre primeiro numa bola dele.' },
   { id: 'bola61', name: 'Bola 61', short: '61 pontos', desc: 'Cada bola vale o seu número. Toque sempre na menor da mesa. Quem chegar a 61 vence.' },
@@ -60,15 +58,14 @@ export const isGroupMode = (m: Mode): boolean => m !== 'bola61' && m !== 'guerra
 export const groupOf = (mode: Mode, id: number): Group | null => {
   if (mode === 'guerra') return id >= 1 && id <= 7 ? 'blue' : id >= 8 && id <= 14 ? 'red' : null;
   if (id <= 0 || id === 8) return null;
-  if (mode === 'par_impar') return id % 2 === 0 || id === 15 ? 'even' : 'odd';
   if (mode === 'lisas_listradas') return id < 8 ? 'solid' : 'stripe';
   return null;
 };
 
 export const groupName = (g: Group | null): string =>
-  g === 'even' ? 'Pares' : g === 'odd' ? 'Ímpares' : g === 'solid' ? 'Lisas' : g === 'stripe' ? 'Listradas' : g === 'blue' ? 'Azuis' : g === 'red' ? 'Vermelhas' : '—';
+  g === 'solid' ? 'Lisas' : g === 'stripe' ? 'Listradas' : g === 'blue' ? 'Azuis' : g === 'red' ? 'Vermelhas' : '—';
 
-export const otherGroup = (g: Group): Group => (g === 'even' ? 'odd' : g === 'odd' ? 'even' : g === 'solid' ? 'stripe' : g === 'stripe' ? 'solid' : g === 'blue' ? 'red' : 'blue');
+export const otherGroup = (g: Group): Group => (g === 'solid' ? 'stripe' : g === 'stripe' ? 'solid' : g === 'blue' ? 'red' : 'blue');
 
 /** Posição inicial: branca na casa e o triângulo com a 8 no centro e uma lisa e uma listrada nas pontas de trás. */
 export function rackPositions(): BallPos[] {

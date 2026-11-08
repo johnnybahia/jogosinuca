@@ -65,11 +65,11 @@ for (const [cl, raw] of [[a, a.id], [b, b.id]]) {
 log('ids públicos: o id real não vaza');
 
 // 4) só o anfitrião muda ajustes e inicia
-b.send({ t: 'settings', mode: 'par_impar' });
+b.send({ t: 'settings', mode: 'lisas_listradas' });
 await sleep(300);
 if (a.view.mode !== 'bola61') fail('convidado não pode mudar o modo');
-a.send({ t: 'settings', mode: 'par_impar', turnSeconds: 60 });
-await a.until(() => a.view.mode === 'par_impar' && a.view.turnSeconds === 60, 5000, 'ajustes do anfitrião');
+a.send({ t: 'settings', mode: 'lisas_listradas', turnSeconds: 60 });
+await a.until(() => a.view.mode === 'lisas_listradas' && a.view.turnSeconds === 60, 5000, 'ajustes do anfitrião');
 a.send({ t: 'start' });
 await a.until(() => a.view.phase === 'playing' && b.view.phase === 'playing', 8000, 'início da partida');
 log('partida iniciada; vez de', a.view.players.find((p) => p.seat === a.view.match.turn).name);
