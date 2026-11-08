@@ -61,7 +61,7 @@ export default {
     if (url.pathname === '/api/rooms' && req.method === 'POST') {
       const body = (await req.json().catch(() => ({}))) as { turnSeconds?: number; isPublic?: boolean; mode?: string; bestOf?: number };
       const turnSeconds = typeof body.turnSeconds === 'number' && (TURN_SECONDS_OPTIONS as readonly number[]).includes(body.turnSeconds) ? body.turnSeconds : 60;
-      const mode = MODES.some((m) => m.id === body.mode) ? body.mode : 'par_impar';
+      const mode = MODES.some((m) => m.id === body.mode) ? body.mode : 'lisas_listradas';
       const bestOf = typeof body.bestOf === 'number' && (BEST_OF_OPTIONS as readonly number[]).includes(body.bestOf) ? body.bestOf : 1;
       for (let i = 0; i < 8; i++) {
         const code = newCode();

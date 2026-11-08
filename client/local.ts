@@ -17,7 +17,7 @@ export class LocalBackend implements Backend {
   private dead = false;
 
   constructor(private profile: Profile, cfg: OfflineSettings, private practice = false) {
-    this.core = new RoomCore(newRoom('LOCAL', { mode: practice ? 'par_impar' : cfg.mode, turnSeconds: practice ? 0 : cfg.turnSeconds }));
+    this.core = new RoomCore(newRoom('LOCAL', { mode: practice ? 'lisas_listradas' : cfg.mode, turnSeconds: practice ? 0 : cfg.turnSeconds }));
     this.core.d.practice = practice;
     this.core.d.hostColor = cfg.color;
     this.core.join(profile.id, profile.name);

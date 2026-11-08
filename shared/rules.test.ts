@@ -16,7 +16,7 @@ describe('regras', () => {
   });
 
   it('mesa aberta: tocar na 8 primeiro é falta; qualquer outra vale', () => {
-    const s = newMatch('par_impar');
+    const s = newMatch('lisas_listradas');
     expect(legalFirstHit(s, 8)).toBe(false);
     expect(legalFirstHit(s, 3)).toBe(true);
     expect(targets(s)).not.toContain(8);
@@ -56,15 +56,15 @@ describe('regras', () => {
   });
 
   it('define grupos pela primeira bola derrubada e a 8 vence só no final', () => {
-    const s = newMatch('par_impar');
+    const s = newMatch('lisas_listradas');
     const sim = simFrom(s);
     sim.firstHit = 2;
     sim.railAfterHit = true;
     sim.balls[2]!.on = false;
     sim.pocketed.push({ id: 2, p: 0 });
     const r1 = resolveShot(s, sim);
-    expect(r1.state.groups[0]).toBe('even');
-    expect(r1.state.groups[1]).toBe('odd');
+    expect(r1.state.groups[0]).toBe('solid');
+    expect(r1.state.groups[1]).toBe('stripe');
     expect(r1.state.turn).toBe(0);
     // 8 antes da hora: perde
     const s2 = r1.state;
@@ -78,7 +78,7 @@ describe('regras', () => {
     expect(r2.out.winner).toBe(1);
     // grupo limpo: 8 legal vence
     const s3 = JSON.parse(JSON.stringify(s2));
-    for (const b of s3.balls) if (b.id > 0 && b.id !== 8 && groupOf('par_impar', b.id) === 'even') b.on = false;
+    for (const b of s3.balls) if (b.id > 0 && b.id !== 8 && groupOf('lisas_listradas', b.id) === 'solid') b.on = false;
     expect(remaining(s3, 0)).toBe(0);
     const sim3 = simFrom(s3);
     sim3.firstHit = 8;
@@ -90,7 +90,7 @@ describe('regras', () => {
   });
 
   it('falta devolve à mesa uma bola já feita pelo infrator', () => {
-    const s = newMatch('par_impar');
+    const s = newMatch('lisas_listradas');
     const sim = simFrom(s);
     sim.firstHit = 2;
     sim.railAfterHit = true;
@@ -99,7 +99,7 @@ describe('regras', () => {
     const s1 = resolveShot(s, sim).state;
     expect(s1.tray).toContain(2);
     const sim2 = simFrom(s1);
-    sim2.firstHit = 3; // bola do adversário primeiro
+    sim2.firstHit = 9; // bola do adversário primeiro
     sim2.railAfterHit = true;
     const r = resolveShot(s1, sim2);
     expect(r.out.foul).not.toBeNull();
@@ -111,12 +111,12 @@ describe('regras', () => {
   });
 
   it('errar a 8 (só ela restando) é falta sem devolver bola', () => {
-    const s = newMatch('par_impar');
-    s.groups = ['even', 'odd'] as never;
-    s.tray = [2, 4, 6, 10, 12, 14, 15];
+    const s = newMatch('lisas_listradas');
+    s.groups = ['solid', 'stripe'] as never;
+    s.tray = [1, 2, 3, 4, 5, 6, 7];
     for (const b of s.balls) if (s.tray.includes(b.id)) b.on = false;
     const sim = simFrom(s);
-    sim.firstHit = 3; // tocou numa bola do adversário em vez da 8
+    sim.firstHit = 9; // tocou numa bola do adversário em vez da 8
     sim.railAfterHit = true;
     const r = resolveShot(s, sim);
     expect(r.out.foul).not.toBeNull();
@@ -127,7 +127,7 @@ describe('regras', () => {
   });
 
   it('tocar na bola certa sem derrubar nada nem bater na tabela não é falta', () => {
-    const s = newMatch('par_impar');
+    const s = newMatch('lisas_listradas');
     s.breakShot = false;
     const sim = simFrom(s);
     sim.firstHit = 3;

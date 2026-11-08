@@ -18,7 +18,7 @@ function rng(seed: number): () => number {
 describe('robustez da física', () => {
   it('tacadas aleatórias (inclusive extremas) nunca quebram a mesa', () => {
     const r = rng(2024);
-    let s: MatchState = newMatch('par_impar');
+    let s: MatchState = newMatch('lisas_listradas');
     let worst = 0;
     let maxT = 0;
     for (let i = 0; i < 160; i++) {
@@ -48,7 +48,7 @@ describe('robustez da física', () => {
       const { state } = resolveShot(st, sim);
       s = state;
       if (s.over) s = newMatch(i % 2 ? 'bola61' : 'lisas_listradas');
-      else if (s.balls.filter((b) => b.on).length < 4) s = newMatch('par_impar');
+      else if (s.balls.filter((b) => b.on).length < 4) s = newMatch('lisas_listradas');
     }
     console.log('pior caso de CPU numa tacada:', worst.toFixed(1), 'ms; maior duração simulada:', maxT.toFixed(1), 's');
   });
@@ -71,7 +71,7 @@ describe('robustez da física', () => {
       strike(sim.balls[0]!, plan.shot);
       sim.run(60);
       s = resolveShot(st, sim).state;
-      if (s.over) s = newMatch('par_impar');
+      if (s.over) s = newMatch('lisas_listradas');
     }
   });
 });
