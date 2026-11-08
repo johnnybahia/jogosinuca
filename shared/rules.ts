@@ -16,7 +16,7 @@ export type Group = 'even' | 'odd' | 'solid' | 'stripe' | 'red' | 'blue';
 export type InHand = 'none' | 'any' | 'head' | 'choice';
 
 export const MODES: { id: Mode; name: string; short: string; desc: string }[] = [
-  { id: 'par_impar', name: 'Par ou Ímpar', short: 'Pares x Ímpares', desc: 'Sinuca brasileira: um fica com as bolas pares, o outro com as ímpares. A 8 só no final.' },
+  { id: 'par_impar', name: 'Par ou Ímpar', short: 'Pares x Ímpares', desc: 'Sinuca brasileira: um fica com as bolas pares, o outro com as ímpares. 7 bolas cada (a 15 conta como par). A 8 só no final.' },
   { id: 'lisas_listradas', name: 'Lisas x Listradas', short: 'Bola 8', desc: 'Bola 8 clássica: 1–7 lisas contra 9–15 listradas. A 8 só no final.' },
   { id: 'guerra', name: 'Sinuca de boteco valendo a 🍺', short: 'Azuis x Vermelhas', desc: 'Brincadeira de boteco: 7 bolas azuis contra 7 vermelhas coladas nas tabelas. Derrube as do adversário; as suas, nunca. Toque sempre primeiro numa bola dele.' },
   { id: 'bola61', name: 'Bola 61', short: '61 pontos', desc: 'Cada bola vale o seu número. Toque sempre na menor da mesa. Quem chegar a 61 vence.' },
@@ -60,7 +60,7 @@ export const isGroupMode = (m: Mode): boolean => m !== 'bola61' && m !== 'guerra
 export const groupOf = (mode: Mode, id: number): Group | null => {
   if (mode === 'guerra') return id >= 1 && id <= 7 ? 'blue' : id >= 8 && id <= 14 ? 'red' : null;
   if (id <= 0 || id === 8) return null;
-  if (mode === 'par_impar') return id % 2 === 0 ? 'even' : 'odd';
+  if (mode === 'par_impar') return id % 2 === 0 || id === 15 ? 'even' : 'odd';
   if (mode === 'lisas_listradas') return id < 8 ? 'solid' : 'stripe';
   return null;
 };
