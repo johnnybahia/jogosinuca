@@ -1046,7 +1046,7 @@ export class GameScreen {
         savePrefs({ ...loadPrefs(), cue: id });
         this.view.setCue(id === 'aleatorio' ? (Math.random() < 0.5 ? 'pacote' : 'classico') : id);
       })),
-      online ? h('div', { class: 'row' }, btn(this.rtc?.camOn ? '📷 Câmera ligada' : '🚫 Câmera desligada', () => { void this.toggleMedia('cam').then(() => this.overlay?.close()); }), btn(this.rtc?.micOn ? '🎤 Microfone ligado' : '🔇 Microfone desligado', () => { void this.toggleMedia('mic').then(() => this.overlay?.close()); })) : null,
+      online ? h('div', { class: 'row' }, btn(this.rtc?.camOn ? '📹 Câmera ligada' : '🚫 Câmera desligada', () => { void this.toggleMedia('cam').then(() => this.overlay?.close()); }), btn(this.rtc?.micOn ? '🎤 Microfone ligado' : '🔇 Microfone desligado', () => { void this.toggleMedia('mic').then(() => this.overlay?.close()); })) : null,
       this.backend.isPractice ? btn('Reorganizar o triângulo', () => { this.overlay?.close(); this.backend.rerack?.(); }) : null,
       upd,
       h('div', { class: 'row' }, btn('Continuar', () => this.overlay?.close(), 'primary'), btn('Sair da partida', () => this.confirmExit(), 'danger')),

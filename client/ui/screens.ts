@@ -103,7 +103,7 @@ function showHelp(): void {
       h('li', { text: 'EFEITO (esquerda): toque na bola branca para dar efeito — em cima (segue), embaixo (recua), nos lados. Toque duas vezes para centralizar.' }),
       h('li', { text: 'Barra "ajuste fino" (embaixo) para acertar o ângulo devagar. Setas ← → fazem o mesmo (Shift = ainda mais fino).' }),
       h('li', { text: 'V alterna a vista de cima (nela, toque onde quer mirar). G liga/desliga a linha de mira. H (💡) mostra a dica de tacada — só offline.' }),
-      h('li', { text: 'Online: 💬 manda uma reação, 📷 e 🎤 ligam câmera e microfone (começam desligados).' }),
+      h('li', { text: 'Online: 💬 manda uma reação, 📹 e 🎤 ligam câmera e microfone (começam desligados).' }),
     ),
     h('h3', { text: 'Modos' }),
     h('ul', null, ...MODES.map((m) => h('li', null, h('b', { text: `${m.name}: ` }), m.desc))),
