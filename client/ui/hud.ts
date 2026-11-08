@@ -115,7 +115,7 @@ export class Hud {
     this.btnGuide = mk('◎', 'Linha de mira (G)', () => hd.onGuide());
     this.btnSound = mk('♪', 'Som (M)', () => hd.onSound());
     const btnMenu = mk('☰', 'Menu (Esc)', () => hd.onMenu());
-    this.btnCam = mk('📷', 'Câmera', () => hd.onCam?.());
+    this.btnCam = mk('📹', 'Câmera', () => hd.onCam?.());
     this.btnMic = mk('🎤', 'Microfone', () => hd.onMic?.());
     this.btnEmote = mk('💬', 'Reações', () => this.emotes.classList.toggle('open'));
     this.btnHint = mk('💡', 'Dica de tacada (H)', () => hd.onHint?.());
@@ -431,7 +431,7 @@ export class Hud {
   setMedia(cam: boolean, mic: boolean): void {
     this.btnCam.classList.toggle('on', cam);
     this.btnMic.classList.toggle('on', mic);
-    this.btnCam.textContent = cam ? '📷' : '🚫';
+    this.btnCam.textContent = cam ? '📹' : '🚫';
     this.btnMic.textContent = mic ? '🎤' : '🔇';
   }
 
